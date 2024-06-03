@@ -1,57 +1,140 @@
 package service
 
 import (
+	b64 "encoding/base64"
 	"fmt"
-	"reflect"
+	"github.com/bwgame666/common/libs"
+	"github.com/fasthttp/router"
+	"github.com/valyala/fasthttp"
+	"github.com/xxtea/xxtea-go/xxtea"
+	"time"
 )
 
-type HttpService struct{}
-type RequestHandler func(req interface{}) (resp interface{})
+type HttpService struct {
+	route           *router.Router
+	MiddlewareList  []middlewareFunc
+	ApiTimeoutMsg   string
+	ApiTimeout      time.Duration
+	EncryptResponse bool
+	EncryptKey      string
+}
 
-func GetReflect(handle RequestHandler) {
+type RequestHandler interface{}
 
-	// 获取函数类型
-	funcType := reflect.TypeOf(handle)
+type ResponseData struct {
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
+}
 
-	// 获取函数的输入类型
-	inputTypes := make([]reflect.Type, funcType.NumIn())
-	for i := 0; i < funcType.NumIn(); i++ {
-		inputTypes[i] = funcType.In(i)
+func New(MiddlewareList []middlewareFunc) *HttpService {
+	return &HttpService{
+		route:           router.New(),
+		MiddlewareList:  MiddlewareList,
+		ApiTimeoutMsg:   `{"code": 408001,"message":"The server response timed out. Please try again later."}`,
+		ApiTimeout:      time.Second * 30,
+		EncryptResponse: false,
+		EncryptKey:      "",
 	}
-	fmt.Println("Input Types:", inputTypes)
+}
 
-	// 获取函数的输出类型
-	outputTypes := make([]reflect.Type, funcType.NumOut())
-	for i := 0; i < funcType.NumOut(); i++ {
-		outputTypes[i] = funcType.Out(i)
+func (that *HttpService) startServer(addr string) {
+	srv := &fasthttp.Server{
+		Handler:            that.middlewareDecorator(that.route.Handler),
+		ReadTimeout:        that.ApiTimeout,
+		WriteTimeout:       that.ApiTimeout,
+		MaxRequestBodySize: 51 * 1024 * 1024,
 	}
-	fmt.Println("Output Types:", outputTypes)
+	if err := srv.ListenAndServe(addr); err != nil {
+		fmt.Println("Error in ListenAndServe: ", err)
+	}
 }
 
 func (that *HttpService) post(path string, handle RequestHandler) {
-
+	that.route.POST(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
 func (that *HttpService) get(path string, handle RequestHandler) {
-
+	that.route.GET(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
 func (that *HttpService) put(path string, handle RequestHandler) {
-
+	that.route.PUT(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
 func (that *HttpService) delete(path string, handle RequestHandler) {
-
+	that.route.DELETE(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
 func (that *HttpService) head(path string, handle RequestHandler) {
-
+	that.route.HEAD(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
 func (that *HttpService) options(path string, handle RequestHandler) {
-
+	that.route.OPTIONS(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
 func (that *HttpService) patch(path string, handle RequestHandler) {
+	that.route.PATCH(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
+}
 
+func (that *HttpService) response(ctx *fasthttp.RequestCtx, data *ResponseData) {
+
+	bytes, err := libs.JsonMarshal(data)
+	if err != nil {
+		ctx.SetBody([]byte(err.Error()))
+		return
+	}
+
+	if !that.EncryptResponse {
+		ctx.SetStatusCode(200)
+		ctx.SetContentType("application/json")
+		ctx.SetBody(bytes)
+		return
+	}
+
+	if that.EncryptKey == "" {
+		ctx.SetContentType("text/plain")
+		ctx.SetBody([]byte(""))
+		return
+	}
+	encryptData := xxtea.Encrypt(bytes, []byte(that.EncryptKey))
+	sEnc := b64.StdEncoding.EncodeToString(encryptData)
+	ctx.SetStatusCode(200)
+	ctx.SetContentType("text/plain")
+	ctx.SetBody([]byte(sEnc))
+}
+
+func (that *HttpService) middlewareDecorator(handler fasthttp.RequestHandler) fasthttp.RequestHandler {
+
+	return func(ctx *fasthttp.RequestCtx) {
+
+		for _, mFunc := range that.MiddlewareList {
+			if err := mFunc(that, ctx); err != nil {
+				data := &ResponseData{
+					Code:    408002,
+					Message: err.Error(),
+				}
+				that.response(ctx, data)
+			}
+		}
+
+		startTime := time.Now()
+		// 处理http请求
+		handler(ctx)
+
+		// 高耗时请求处理
+		costTime := time.Since(startTime)
+		if costTime > 2*time.Second {
+			path := string(ctx.Path())
+			info := fmt.Sprintf("path: %s, query args: %s, post args: %s, ts: %s, time cost: %v",
+				path,
+				ctx.QueryArgs().String(),
+				ctx.PostArgs().String(),
+				startTime.Format("2006-01-02 15:04:05"),
+				costTime,
+			)
+			fmt.Println(info)
+		}
+	}
 }
