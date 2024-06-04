@@ -10,7 +10,7 @@ import (
 	"net/url"
 )
 
-type middlewareFunc func(svr *HttpService, ctx *fasthttp.RequestCtx) error
+type MiddlewareFunc func(svr *HttpService, ctx *fasthttp.RequestCtx) error
 
 func verify(str string) string {
 	h32 := murmur3.SeedNew32(24)
@@ -22,7 +22,7 @@ func verify(str string) string {
 	return fmt.Sprintf("%d", v)
 }
 
-func decryptMiddleware(svr *HttpService, ctx *fasthttp.RequestCtx) error {
+func DecryptMiddleware(svr *HttpService, ctx *fasthttp.RequestCtx) error {
 	// 请求参数解密中间件
 
 	allows := map[string]bool{

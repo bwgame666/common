@@ -12,7 +12,7 @@ import (
 
 type HttpService struct {
 	route           *router.Router
-	MiddlewareList  []middlewareFunc
+	MiddlewareList  []MiddlewareFunc
 	ApiTimeoutMsg   string
 	ApiTimeout      time.Duration
 	EncryptResponse bool
@@ -27,7 +27,7 @@ type ResponseData struct {
 	Data    interface{} `json:"data"`
 }
 
-func New(MiddlewareList []middlewareFunc) *HttpService {
+func New(MiddlewareList []MiddlewareFunc) *HttpService {
 	return &HttpService{
 		route:           router.New(),
 		MiddlewareList:  MiddlewareList,
