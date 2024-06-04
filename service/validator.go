@@ -51,7 +51,7 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		err := getRequestArgs(ctx, &paramValue)
 		if err != nil {
 			fmt.Println("Error:", err)
-			svr.response(ctx, data)
+			svr.Response(ctx, data)
 			return
 		}
 
@@ -61,7 +61,7 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		errV := validate.Struct(req)
 		if errV != nil {
 			fmt.Println("Validation errors:", errV)
-			svr.response(ctx, data)
+			svr.Response(ctx, data)
 			return
 		}
 
@@ -74,6 +74,6 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		data.Code = 200
 		data.Message = "success"
 		data.Data = resp
-		svr.response(ctx, data)
+		svr.Response(ctx, data)
 	}
 }

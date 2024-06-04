@@ -38,7 +38,7 @@ func New(MiddlewareList []MiddlewareFunc) *HttpService {
 	}
 }
 
-func (that *HttpService) startServer(addr string) {
+func (that *HttpService) StartServer(addr string) {
 	srv := &fasthttp.Server{
 		Handler:            that.middlewareDecorator(that.route.Handler),
 		ReadTimeout:        that.ApiTimeout,
@@ -50,35 +50,35 @@ func (that *HttpService) startServer(addr string) {
 	}
 }
 
-func (that *HttpService) post(path string, handle RequestHandler) {
+func (that *HttpService) Post(path string, handle RequestHandler) {
 	that.route.POST(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
-func (that *HttpService) get(path string, handle RequestHandler) {
+func (that *HttpService) Get(path string, handle RequestHandler) {
 	that.route.GET(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
-func (that *HttpService) put(path string, handle RequestHandler) {
+func (that *HttpService) Put(path string, handle RequestHandler) {
 	that.route.PUT(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
-func (that *HttpService) delete(path string, handle RequestHandler) {
+func (that *HttpService) Delete(path string, handle RequestHandler) {
 	that.route.DELETE(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
-func (that *HttpService) head(path string, handle RequestHandler) {
+func (that *HttpService) Head(path string, handle RequestHandler) {
 	that.route.HEAD(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
-func (that *HttpService) options(path string, handle RequestHandler) {
+func (that *HttpService) Options(path string, handle RequestHandler) {
 	that.route.OPTIONS(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
-func (that *HttpService) patch(path string, handle RequestHandler) {
+func (that *HttpService) Patch(path string, handle RequestHandler) {
 	that.route.PATCH(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
-func (that *HttpService) response(ctx *fasthttp.RequestCtx, data *ResponseData) {
+func (that *HttpService) Response(ctx *fasthttp.RequestCtx, data *ResponseData) {
 
 	bytes, err := libs.JsonMarshal(data)
 	if err != nil {
@@ -115,7 +115,7 @@ func (that *HttpService) middlewareDecorator(handler fasthttp.RequestHandler) fa
 					Code:    408002,
 					Message: err.Error(),
 				}
-				that.response(ctx, data)
+				that.Response(ctx, data)
 			}
 		}
 
