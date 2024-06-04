@@ -27,14 +27,14 @@ type ResponseData struct {
 	Data    interface{} `json:"data"`
 }
 
-func New(MiddlewareList []MiddlewareFunc) *HttpService {
+func New(middlewareList []MiddlewareFunc, encryptKey string, encryptResponse bool) *HttpService {
 	return &HttpService{
 		route:           router.New(),
-		MiddlewareList:  MiddlewareList,
+		MiddlewareList:  middlewareList,
 		ApiTimeoutMsg:   `{"code": 408001,"message":"The server response timed out. Please try again later."}`,
 		ApiTimeout:      time.Second * 30,
-		EncryptResponse: false,
-		EncryptKey:      "",
+		EncryptResponse: encryptResponse,
+		EncryptKey:      encryptKey,
 	}
 }
 
@@ -116,6 +116,7 @@ func (that *HttpService) middlewareDecorator(handler fasthttp.RequestHandler) fa
 					Message: err.Error(),
 				}
 				that.Response(ctx, data)
+				return
 			}
 		}
 

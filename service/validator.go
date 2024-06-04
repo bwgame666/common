@@ -12,7 +12,7 @@ import (
 func getRequestArgs(ctx *fasthttp.RequestCtx, paramValue interface{}) error {
 	if ctx.IsGet() || ctx.IsDelete() {
 		requestArg := ctx.QueryArgs()
-		fmt.Println("request args: ", requestArg)
+		//fmt.Println("request args: ", requestArg)
 		requestMap := make(map[string]interface{})
 		requestArg.VisitAll(func(key, value []byte) {
 			requestMap[string(key)] = string(value)
@@ -26,7 +26,7 @@ func getRequestArgs(ctx *fasthttp.RequestCtx, paramValue interface{}) error {
 	} else if ctx.IsPost() || ctx.IsPut() {
 		// 读取post请求参数
 		requestBody := ctx.PostBody()
-		fmt.Println("Request body: ", requestBody)
+		//fmt.Println("Request body: ", requestBody)
 		err := libs.JsonUnmarshal(requestBody, paramValue)
 		if err != nil {
 			fmt.Println("Error:", err)
