@@ -33,7 +33,11 @@ func NewMysqlClient(dsn string) (*MysqlClient, error) {
 }
 
 func (that *MysqlClient) AddOne(tableName string, doc interface{}) (string, error) {
-	res, err := that.db.Insert(tableName).Rows(doc).Returning("id").Executor().Exec()
+	gDoc, err := StructToRecord(doc)
+	if err != nil {
+		return "", err
+	}
+	res, err := that.db.Insert(tableName).Rows(gDoc).Returning("id").Executor().Exec()
 	if err != nil {
 		return "", err
 	}
@@ -44,21 +48,25 @@ func (that *MysqlClient) AddOne(tableName string, doc interface{}) (string, erro
 	return fmt.Sprintf("%d", id), nil
 }
 
-func (that *MysqlClient) GetOne(id string) (interface{}, error) {
+func (that *MysqlClient) GetOne(tableName string, id string) (interface{}, error) {
 	var result interface{}
-	_, err := that.db.From("table_name").Where(goqu.C("id").Eq(id)).ScanStruct(&result)
+	_, err := that.db.From(tableName).Where(goqu.C("id").Eq(id)).ScanStruct(&result)
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
-func (that *MysqlClient) UpdateOne(id string, doc interface{}) error {
-	_, err := that.db.Update("table_name").Set(doc).Where(goqu.C("id").Eq(id)).Executor().Exec()
+func (that *MysqlClient) UpdateOne(tableName string, id string, doc interface{}) (string, error) {
+	gDoc, err := StructToRecord(doc)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	_, err = that.db.Update(tableName).Set(gDoc).Where(goqu.C("id").Eq(id)).Executor().Exec()
+	if err != nil {
+		return "", err
+	}
+	return id, nil
 }
 
 func (that *MysqlClient) DeleteOne(tableName string, id string) error {
