@@ -3,7 +3,7 @@ package model
 import (
 	"context"
 	"encoding/json"
-	"github.com/coreos/etcd/clientv3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 type EtcdClient struct {
