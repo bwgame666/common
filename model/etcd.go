@@ -22,7 +22,8 @@ func NewEtcdClient(endpoints []string) (*EtcdClient, error) {
 	}, nil
 }
 
-func (that *EtcdClient) SetConfig(ctx context.Context, path string, doc interface{}) error {
+func (that *EtcdClient) SetConfig(path string, doc interface{}) error {
+	ctx := context.Background()
 	data, err := json.Marshal(doc)
 	if err != nil {
 		return err
@@ -31,15 +32,15 @@ func (that *EtcdClient) SetConfig(ctx context.Context, path string, doc interfac
 	return err
 }
 
-func (that *EtcdClient) GetConfig(ctx context.Context, path string) (interface{}, error) {
+func (that *EtcdClient) GetConfig(path string, result interface{}) error {
+	ctx := context.Background()
 	resp, err := that.client.Get(ctx, path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if len(resp.Kvs) == 0 {
-		return nil, nil
+		return nil
 	}
-	var result interface{}
-	err = json.Unmarshal(resp.Kvs[0].Value, &result)
-	return result, err
+	err = json.Unmarshal(resp.Kvs[0].Value, result)
+	return err
 }
