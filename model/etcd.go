@@ -3,22 +3,38 @@ package model
 import (
 	"context"
 	"encoding/json"
-	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3"
+	"math"
 )
 
 type EtcdClient struct {
 	client *clientv3.Client
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
-func NewEtcdClient(endpoints []string) (*EtcdClient, error) {
-	client, err := clientv3.New(clientv3.Config{
-		Endpoints: endpoints,
-	})
+func NewEtcdClient(endpoints []string, userName string, password string) (*EtcdClient, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	config := clientv3.Config{
+		Endpoints:          endpoints,
+		MaxCallRecvMsgSize: math.MaxInt32,
+		Context:            ctx,
+	}
+	if userName != "" {
+		config.Username = userName
+	}
+	if password != "" {
+		config.Password = password
+	}
+	client, err := clientv3.New(config)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 	return &EtcdClient{
 		client: client,
+		ctx:    ctx,
+		cancel: cancel,
 	}, nil
 }
 
@@ -43,4 +59,13 @@ func (that *EtcdClient) GetConfig(path string, result interface{}) error {
 	}
 	err = json.Unmarshal(resp.Kvs[0].Value, result)
 	return err
+}
+
+func (that *EtcdClient) Close() error {
+	if that.client == nil {
+		return nil
+	}
+	that.cancel()
+
+	return that.client.Close()
 }
