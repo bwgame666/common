@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"go.etcd.io/etcd/client/v3"
 	"math"
+	"time"
 )
 
 type EtcdClient struct {
@@ -19,6 +20,7 @@ func NewEtcdClient(endpoints []string, userName string, password string) (*EtcdC
 		Endpoints:          endpoints,
 		MaxCallRecvMsgSize: math.MaxInt32,
 		Context:            ctx,
+		DialTimeout:        5 * time.Second,
 	}
 	if userName != "" {
 		config.Username = userName
