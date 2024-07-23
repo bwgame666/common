@@ -91,7 +91,7 @@ func (that *MongoClient) GetOne(id string, result interface{}) error {
 		return err
 	}
 	filter := map[string]interface{}{"_id": objectID}
-	err = that.collection.Find(context.TODO(), filter).One(&result)
+	err = that.collection.Find(context.TODO(), filter).One(result)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func (that *MongoClient) DeleteOne(id string) error {
 	return nil
 }
 
-func (that *MongoClient) Query(filter interface{}, start int64, count int64, result []interface{}) error {
+func (that *MongoClient) Query(filter interface{}, start int64, count int64, result interface{}) error {
 	err := that.collection.Find(context.TODO(), filter).Skip(start).Limit(count).All(result)
 	if err != nil {
 		return err
