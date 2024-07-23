@@ -3,9 +3,16 @@ package model
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"github.com/pelletier/go-toml"
 	"go.etcd.io/etcd/client/v3"
 	"math"
 	"time"
+)
+
+var (
+	dialTimeout    = 5 * time.Second
+	requestTimeout = 8 * time.Second
 )
 
 type EtcdClient struct {
@@ -20,7 +27,7 @@ func NewEtcdClient(endpoints []string, userName string, password string) (*EtcdC
 		Endpoints:          endpoints,
 		MaxCallRecvMsgSize: math.MaxInt32,
 		Context:            ctx,
-		DialTimeout:        5 * time.Second,
+		DialTimeout:        dialTimeout,
 	}
 	if userName != "" {
 		config.Username = userName
@@ -40,6 +47,7 @@ func NewEtcdClient(endpoints []string, userName string, password string) (*EtcdC
 	}, nil
 }
 
+/*
 func (that *EtcdClient) SetConfig(path string, doc interface{}) error {
 	ctx := context.Background()
 	data, err := json.Marshal(doc)
@@ -61,6 +69,76 @@ func (that *EtcdClient) GetConfig(path string, result interface{}) error {
 	}
 	err = json.Unmarshal(resp.Kvs[0].Value, result)
 	return err
+}
+*/
+
+func isDigit(s string) bool {
+
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func (that *EtcdClient) Parse(key string, v interface{}) error {
+
+	ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
+	kv := clientv3.NewKV(that.client)
+	gr, _ := kv.Get(ctx, key)
+	if gr == nil || len(gr.Kvs) == 0 {
+		return fmt.Errorf("no more '%s'", key)
+	}
+
+	return json.Unmarshal(gr.Kvs[0].Value, v)
+}
+
+func (that *EtcdClient) ParseTomlStruct(key string, v interface{}) error {
+
+	ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
+	kv := clientv3.NewKV(that.client)
+	gr, _ := kv.Get(ctx, key)
+	if gr == nil || len(gr.Kvs) == 0 {
+		fmt.Println("no more: ", key)
+		return fmt.Errorf("no more '%s'", key)
+	}
+
+	return toml.Unmarshal(gr.Kvs[0].Value, v)
+}
+
+func (that *EtcdClient) ParseToml(key string, filter bool) (map[string]map[string]interface{}, error) {
+
+	ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
+	kv := clientv3.NewKV(that.client)
+	gr, _ := kv.Get(ctx, key)
+	if gr == nil || len(gr.Kvs) == 0 {
+		return nil, fmt.Errorf("no more '%s'", key)
+	}
+
+	recs := map[string]map[string]interface{}{}
+	config, err := toml.LoadBytes(gr.Kvs[0].Value)
+	if err != nil {
+		return recs, err
+	}
+
+	keys := config.Keys()
+	for _, val := range keys {
+
+		if filter && isDigit(val) {
+
+			tree := config.Get(val).(*toml.Tree)
+			recs[val] = tree.ToMap()
+		} else {
+			tree := config.Get(val).(*toml.Tree)
+			recs[val] = tree.ToMap()
+		}
+	}
+
+	return recs, nil
 }
 
 func (that *EtcdClient) Close() error {
