@@ -54,10 +54,12 @@ func InitMongoConnection(url string, username string, passwd string, dbname stri
 		cli, err := qmgo.NewClient(ctx, &cfg, opts)
 		if err != nil {
 			fmt.Println("initMongoClient failed: ", err.Error())
+			return
 		}
 		err = cli.Ping(5)
 		if err != nil {
 			fmt.Println("MongoClient ping failed: ", err.Error())
+			return
 		}
 		mongoClient = cli
 	})
