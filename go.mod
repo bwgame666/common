@@ -12,6 +12,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/nats-io/nats.go v1.36.0
 	github.com/pelletier/go-toml v1.9.5
+	github.com/qiniu/qmgo v1.1.8
 	github.com/twmb/murmur3 v1.1.8
 	github.com/valyala/fasthttp v1.55.0
 	github.com/xxtea/xxtea-go v1.0.0

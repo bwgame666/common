@@ -3,34 +3,68 @@ package model
 import (
 	"context"
 	"fmt"
+	"github.com/qiniu/qmgo"
+	qnOpts "github.com/qiniu/qmgo/options"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"sync"
 )
 
 var (
-	mongoClient *mongo.Client
+	mongoClient *qmgo.Client
 	mongoOnce   sync.Once
 )
 
 type MongoClient struct {
-	client     *mongo.Client
-	database   *mongo.Database
-	collection *mongo.Collection
+	client     *qmgo.Client
+	database   *qmgo.Database
+	collection *qmgo.Collection
 }
 
-func NewMongoClient(uri, dbName, collectionName string) (*MongoClient, error) {
-
+func InitMongoConnection(url string, username string, passwd string, dbname string) *qmgo.Client {
+	var (
+		timeout     int64  = 2000
+		maxPoolSize uint64 = 100
+		minPoolSize uint64 = 0
+	)
+	var ctx = context.Background()
 	mongoOnce.Do(func() {
-		// 单例模式，创建 MongoDB 客户端, 进程复用一个连接
-		client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(uri))
-		if err != nil {
-			return
+		clientOptions := &options.ClientOptions{}
+		// 设置认证信息
+		credential := options.Credential{
+			Username:   username,
+			Password:   passwd,
+			AuthSource: dbname,
 		}
-		mongoClient = client
+		clientOptions.SetAuth(credential)
+		opts := qnOpts.ClientOptions{
+			ClientOptions: clientOptions,
+		}
+
+		cfg := qmgo.Config{
+			Uri:              url,
+			ConnectTimeoutMS: &timeout,
+			MaxPoolSize:      &maxPoolSize,
+			MinPoolSize:      &minPoolSize,
+			ReadPreference:   &qmgo.ReadPref{Mode: readpref.SecondaryMode, MaxStalenessMS: 100 * 1000},
+		}
+
+		cli, err := qmgo.NewClient(ctx, &cfg, opts)
+		if err != nil {
+			fmt.Println("initMongoClient failed: ", err.Error())
+		}
+		err = cli.Ping(5)
+		if err != nil {
+			fmt.Println("MongoClient ping failed: ", err.Error())
+		}
+		mongoClient = cli
 	})
+	return mongoClient
+}
+
+func NewMongoClient(dbName, collectionName string) (*MongoClient, error) {
 	// 获取数据库和集合
 	database := mongoClient.Database(dbName)
 	collection := database.Collection(collectionName)
@@ -50,69 +84,52 @@ func (that *MongoClient) AddOne(doc interface{}) (string, error) {
 	return result.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func (that *MongoClient) GetOne(id string) (interface{}, error) {
+func (that *MongoClient) GetOne(id string, result interface{}) error {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return nil, err
+		return err
+	}
+	err = that.collection.Find(context.TODO(), bson.M{"_id": objectID}).One(&result)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (that *MongoClient) UpdateOne(id string, doc interface{}) error {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+	filter := map[string]interface{}{"_id": objectID}
+	err = that.collection.UpdateOne(context.TODO(), filter, doc)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (that *MongoClient) DeleteOne(id string) error {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
 	}
 	var result interface{}
-	err = that.collection.FindOne(context.TODO(), bson.M{"_id": objectID}).Decode(&result)
+	err = that.GetOne(id, result)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return result, nil
+	err = that.collection.RemoveId(context.TODO(), objectID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (that *MongoClient) UpdateOne(id string, doc interface{}) (interface{}, error) {
-	objectID, err := primitive.ObjectIDFromHex(id)
+func (that *MongoClient) Query(filter interface{}, result []interface{}) error {
+	err := that.collection.Find(context.TODO(), filter).All(result)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	_, err = that.collection.ReplaceOne(context.TODO(), bson.M{"_id": objectID}, doc)
-	if err != nil {
-		return nil, err
-	}
-	return that.GetOne(id)
-}
-
-func (that *MongoClient) DeleteOne(id string) (interface{}, error) {
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
-	result, err := that.GetOne(id)
-	if err != nil {
-		return nil, err
-	}
-	_, err = that.collection.DeleteOne(context.TODO(), bson.M{"_id": objectID})
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-func (that *MongoClient) Query(filter interface{}) ([]interface{}, error) {
-	cur, err := that.collection.Find(context.TODO(), filter)
-	if err != nil {
-		return nil, err
-	}
-	defer func(cur *mongo.Cursor, ctx context.Context) {
-		err := cur.Close(ctx)
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-	}(cur, context.TODO())
-	var results []interface{}
-	for cur.Next(context.TODO()) {
-		var result interface{}
-		err := cur.Decode(&result)
-		if err != nil {
-			return nil, err
-		}
-		results = append(results, result)
-	}
-	if err := cur.Err(); err != nil {
-		return nil, err
-	}
-	return results, nil
+	return nil
 }
