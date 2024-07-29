@@ -22,10 +22,12 @@ type IWebSocketSession interface {
 	revLoop()
 	protectedReadMessage() (interface{}, error)
 }
-type SessionInit struct{}
+
+// type SessionInit struct{}
+// type SessionConnected struct{}
+// type SessionConnectError struct{}
+
 type SessionAccepted struct{}
-type SessionConnected struct{}
-type SessionConnectError struct{}
 type SessionClosed struct {
 	C int
 }
@@ -87,6 +89,8 @@ func newSession(conn *websocket.Conn, clientIP string, onOpen onSessFunc, onClos
 		onSessionOpen:  onOpen,
 		onSessionClose: onClose,
 		capturePanic:   true,
+		encoder:        nil,
+		decoder:        nil,
 	}
 	if sess.remoteIP == "" {
 		sess.remoteIP, _ = GetRemoteAddress(sess)
@@ -124,6 +128,7 @@ func (sess *WebSocketSession) RemoteIP() string {
 }
 
 func (sess *WebSocketSession) Start() {
+	fmt.Println("WebSocketSession Start")
 	sess.onSessionOpen(sess)
 
 	sess.exitSync.Add(2)
@@ -163,6 +168,7 @@ func (sess *WebSocketSession) sendLoop() {
 		}
 
 		if exit {
+			fmt.Println("WebSocketSession sendLoop exit")
 			break
 		}
 	}
@@ -205,9 +211,10 @@ func (sess *WebSocketSession) revLoop() {
 		if err != nil {
 			sess.ok = false
 			if !libs.IsEOFOrNetReadError(err) {
-				//logger.Error("[WS] session closed", zap.Error(err))
+				fmt.Println("[WS] session closed", zap.Error(err))
 			}
 			sess.OnSessionMessage(SessionClosed{C: -1})
+			fmt.Println("WebSocketSession revLoop exist")
 			break
 		}
 
@@ -218,11 +225,11 @@ func (sess *WebSocketSession) revLoop() {
 	sess.exitSync.Done()
 }
 
-func (sess *WebSocketSession) SetEncoder(fn DecodeFunc) {
+func (sess *WebSocketSession) SetDecoder(fn DecodeFunc) {
 	sess.decoder = fn
 }
 
-func (sess *WebSocketSession) SetDecoder(fn EncodeFunc) {
+func (sess *WebSocketSession) SetEncoder(fn EncodeFunc) {
 	sess.encoder = fn
 }
 
@@ -248,12 +255,30 @@ func (sess *WebSocketSession) ReadMessage() (interface{}, error) {
 	if dataLen < 2 {
 		return nil, errors.New("packet short size")
 	}
-
 	switch messageType {
 	case websocket.BinaryMessage:
 		if sess.decoder != nil {
-			return sess.decoder(raw), nil
+			msg, err2 := sess.decoder(raw)
+			if err2 != nil {
+				fmt.Println("websocket session decoder failed: ", err2)
+			}
+			return msg, nil
 		}
+	case websocket.TextMessage:
+		if sess.decoder != nil {
+			msg, err2 := sess.decoder(raw)
+			if err2 != nil {
+				fmt.Println("websocket session decoder failed: ", err2)
+			}
+			return msg, nil
+		}
+		return string(raw), nil
+	case websocket.CloseMessage:
+		return nil, nil
+	case websocket.PingMessage:
+		return nil, nil
+	case websocket.PongMessage:
+		return nil, nil
 	}
 
 	return nil, errors.New("processor: decoder nil")

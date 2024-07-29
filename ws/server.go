@@ -20,6 +20,10 @@ type WebSocket struct {
 	listener IWebSocketListener
 	sessMgr  ISessionManager
 
+	defaultEncoder EncodeFunc
+	defaultDecoder DecodeFunc
+	defaultReceive OnSessionMessageFunc
+
 	started bool
 	closed  bool
 	mu      sync.Mutex
@@ -27,7 +31,10 @@ type WebSocket struct {
 
 func NewWebSocket(conf *WebSocketConfig, initFunc ...ServerOption) *WebSocket {
 	webSocketObj := &WebSocket{
-		sessMgr: NewSessionManager(libs.UnixSecs()),
+		sessMgr:        NewSessionManager(libs.UnixSecs()),
+		defaultDecoder: JsonDecoder,
+		defaultEncoder: JsonEncoder,
+		defaultReceive: nil,
 	}
 	webSocketObj.listener = NewWebSocketListener(conf.Addr, conf.Port, webSocketObj.OnConnOpen, webSocketObj.OnConnClose)
 	for _, iFunc := range initFunc {
@@ -85,6 +92,18 @@ func (ws *WebSocket) CloseSession(sessId int64) {
 	}
 }
 
+func (ws *WebSocket) SetDefaultDecoder(fn DecodeFunc) {
+	ws.defaultDecoder = fn
+}
+
+func (ws *WebSocket) SetDefaultEncoder(fn EncodeFunc) {
+	ws.defaultEncoder = fn
+}
+
+func (ws *WebSocket) SetSessionEvent(fn OnSessionMessageFunc) {
+	ws.defaultReceive = fn
+}
+
 func (ws *WebSocket) Broadcast(msg interface{}) {
 	ws.sessMgr.ForEach(func(sess IWebSocketSession) bool {
 		sess.Send(msg)
@@ -93,18 +112,26 @@ func (ws *WebSocket) Broadcast(msg interface{}) {
 }
 
 func (ws *WebSocket) OnConnOpen(conn *websocket.Conn, clientIP string) {
+	fmt.Println("websocket OnConnOpen")
 	ses := newSession(conn, clientIP, ws.OnSessionOpen, ws.OnSessionClose)
+	ses.SetDecoder(ws.defaultDecoder)
+	ses.SetEncoder(ws.defaultEncoder)
+	if ws.defaultReceive != nil {
+		ses.SetSessionEvent(ws.defaultReceive)
+	}
 	ses.Start()
 }
 
 func (ws *WebSocket) OnConnClose(conn *websocket.Conn) {
-
+	fmt.Println("websocket OnConnClose")
 }
 
 func (ws *WebSocket) OnSessionOpen(sess IWebSocketSession) {
+	fmt.Println("websocket OnSessionOpen")
 	ws.AddSession(sess)
 }
 
 func (ws *WebSocket) OnSessionClose(sess IWebSocketSession) {
+	fmt.Println("websocket OnSessionClose")
 	ws.RemoveSession(sess)
 }

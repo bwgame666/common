@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"crypto/tls"
 	"fmt"
 	"github.com/bwgame666/common/libs"
 	"github.com/gorilla/websocket"
@@ -55,7 +56,7 @@ func (wa *WebSocketListener) Start() {
 		path     string
 	)
 	hostPort = fmt.Sprintf("%s:%d", wa.addr, wa.port)
-	path = "/"
+	path = "/ws"
 
 	wa.wsListener, err = net.Listen("tcp", hostPort)
 	if err != nil {
@@ -63,6 +64,7 @@ func (wa *WebSocketListener) Start() {
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("receive connection: ")
 		conn, e := wa.wsUpgrade.Upgrade(w, r, nil)
 		if e != nil {
 			return
@@ -70,10 +72,25 @@ func (wa *WebSocketListener) Start() {
 		wa.onConnOpen(conn, libs.ClientIP(r))
 	})
 
-	wa.httpServ = &http.Server{Addr: hostPort, Handler: mux}
+	tlsConfig := &tls.Config{
+		MinVersion:       tls.VersionTLS12,
+		CurvePreferences: []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+		},
+	}
+
+	wa.httpServ = &http.Server{
+		Addr:      hostPort,
+		Handler:   mux,
+		TLSConfig: tlsConfig,
+	}
 
 	go func() {
-		fmt.Println("gorilla websocket listen start", zap.String("Addr", hostPort))
+		fmt.Println("gorilla websocket listen start", hostPort, wa.certFile, wa.keyFile)
 
 		if wa.certFile != "" && wa.keyFile != "" {
 			err = wa.httpServ.ServeTLS(wa.wsListener, wa.certFile, wa.keyFile)
