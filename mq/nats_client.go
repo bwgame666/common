@@ -17,7 +17,8 @@ func NewNatsClient(url string) (*NatsClient, error) {
 		return nil, err
 	}
 	return &NatsClient{
-		conn: natsConn,
+		conn:   natsConn,
+		subMap: map[string]*nats.Subscription{},
 	}, nil
 }
 
