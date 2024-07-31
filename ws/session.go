@@ -27,9 +27,12 @@ type IWebSocketSession interface {
 // type SessionConnected struct{}
 // type SessionConnectError struct{}
 
-type SessionAccepted struct{}
+type SessionAccepted struct {
+	Sess IWebSocketSession
+}
 type SessionClosed struct {
-	C int
+	Sess IWebSocketSession
+	C    int
 }
 type onSessFunc func(sess IWebSocketSession)
 type DecodeFunc func(p []byte) (interface{}, error)
@@ -141,7 +144,7 @@ func (sess *WebSocketSession) Start() {
 	go sess.revLoop()
 	go sess.sendLoop()
 
-	sess.OnSessionMessage(SessionAccepted{})
+	sess.OnSessionMessage(&SessionAccepted{Sess: sess})
 	sess.ok = true
 }
 
@@ -213,7 +216,7 @@ func (sess *WebSocketSession) revLoop() {
 			if !libs.IsEOFOrNetReadError(err) {
 				fmt.Println("[WS] session closed", zap.Error(err))
 			}
-			sess.OnSessionMessage(SessionClosed{C: -1})
+			sess.OnSessionMessage(&SessionClosed{Sess: sess, C: -1})
 			fmt.Println("WebSocketSession revLoop exist")
 			break
 		}
