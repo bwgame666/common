@@ -57,7 +57,7 @@ func (evt *MsgEvent) Message() interface{} {
 	return evt.Msg
 }
 
-type OnSessionMessageFunc func(*MsgEvent)
+type OnSessionMessageFunc func(interface{})
 
 type WebSocketSession struct {
 	id               int64
