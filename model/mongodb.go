@@ -20,6 +20,8 @@ type MongoClient struct {
 	client     *qmgo.Client
 	database   *qmgo.Database
 	collection *qmgo.Collection
+	sess       *qmgo.Session
+	ctx        context.Context
 }
 
 func InitMongoConnection(url string, username string, passwd string, dbname string) *qmgo.Client {
@@ -74,11 +76,41 @@ func NewMongoClient(dbName, collectionName string) (*MongoClient, error) {
 		client:     mongoClient,
 		database:   database,
 		collection: collection,
+		ctx:        context.TODO(),
 	}, nil
 }
 
+func (that *MongoClient) StartSession() *qmgo.Session {
+	s, err := that.client.Session()
+	if err != nil {
+		fmt.Println("start mongo session failed: ", err)
+	}
+	that.sess = s
+	return that.sess
+}
+
+func (that *MongoClient) EndSession() {
+	that.sess.EndSession(context.Background())
+	that.sess = nil
+}
+
+func (that *MongoClient) StatTransaction(cb func(sessCtx context.Context) (interface{}, error)) {
+	_, err := that.sess.StartTransaction(context.Background(), cb)
+	if err != nil {
+		fmt.Println("StartTransaction failed, err=", err)
+	}
+}
+
+func (that *MongoClient) SetContext(ctx context.Context) {
+	that.ctx = ctx
+}
+
+func (that *MongoClient) GetCollection() *qmgo.Collection {
+	return that.collection
+}
+
 func (that *MongoClient) AddOne(doc interface{}) (string, error) {
-	result, err := that.collection.InsertOne(context.TODO(), doc)
+	result, err := that.collection.InsertOne(that.ctx, doc)
 	if err != nil {
 		return "", err
 	}
@@ -91,7 +123,7 @@ func (that *MongoClient) GetOne(id string, result interface{}) error {
 		return err
 	}
 	filter := map[string]interface{}{"_id": objectID}
-	err = that.collection.Find(context.TODO(), filter).One(result)
+	err = that.collection.Find(that.ctx, filter).One(result)
 	if err != nil {
 		return err
 	}
@@ -104,7 +136,7 @@ func (that *MongoClient) UpdateOne(id string, doc interface{}) error {
 		return err
 	}
 	filter := map[string]interface{}{"_id": objectID}
-	err = that.collection.UpdateOne(context.TODO(), filter, doc)
+	err = that.collection.UpdateOne(that.ctx, filter, doc)
 	if err != nil {
 		return err
 	}
@@ -121,7 +153,7 @@ func (that *MongoClient) DeleteOne(id string) error {
 	if err != nil {
 		return err
 	}
-	err = that.collection.RemoveId(context.TODO(), objectID)
+	err = that.collection.RemoveId(that.ctx, objectID)
 	if err != nil {
 		return err
 	}
@@ -129,7 +161,7 @@ func (that *MongoClient) DeleteOne(id string) error {
 }
 
 func (that *MongoClient) Query(filter interface{}, start int64, count int64, result interface{}) error {
-	err := that.collection.Find(context.TODO(), filter).Skip(start).Limit(count).All(result)
+	err := that.collection.Find(that.ctx, filter).Skip(start).Limit(count).All(result)
 	if err != nil {
 		return err
 	}
