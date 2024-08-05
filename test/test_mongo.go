@@ -24,26 +24,29 @@ func testTransaction() {
 		mongoClient.SetContext(sessCtx)
 		mongoClient2.SetContext(sessCtx)
 		_, err = mongoClient.AddOne(&TestI{
-			Test: 4,
+			Test: 6,
 		})
 		if err != nil {
 			return nil, err
-
 		}
 		_, err = mongoClient2.AddOne(&TestI{
-			Test: 4,
+			Test: 6,
 		})
 		if err != nil {
 			return nil, err
-
 		}
-		return nil, nil
+		return "success", nil
 	}
 
 	mongoClient.StartSession()
 	defer mongoClient.EndSession()
 
-	mongoClient.StatTransaction(callback)
+	result, err := mongoClient.StatTransaction(callback)
+	if err != nil {
+		fmt.Println(err)
+		fmt.Println(result)
+	}
+	fmt.Println(result)
 }
 
 func test() {
@@ -66,11 +69,11 @@ func test() {
 }
 
 func main() {
-	qClient := model.InitMongoConnection("mongodb://127.0.0.1:27017/?replicaSet=rs0",
+	qClient := model.InitMongoConnection("mongodb://127.0.0.1:27020/?replicaSet=rs0",
 		"user", "pass", "db")
 	if qClient == nil {
 		fmt.Println("connect failed")
 		return
 	}
-	test()
+	testTransaction()
 }

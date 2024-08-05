@@ -94,11 +94,13 @@ func (that *MongoClient) EndSession() {
 	that.sess = nil
 }
 
-func (that *MongoClient) StatTransaction(cb func(sessCtx context.Context) (interface{}, error)) {
-	_, err := that.sess.StartTransaction(context.Background(), cb)
+func (that *MongoClient) StatTransaction(cb func(sessCtx context.Context) (interface{}, error)) (interface{}, error) {
+	result, err := that.sess.StartTransaction(context.Background(), cb)
 	if err != nil {
 		fmt.Println("StartTransaction failed, err=", err)
+		return result, err
 	}
+	return result, nil
 }
 
 func (that *MongoClient) SetContext(ctx context.Context) {
