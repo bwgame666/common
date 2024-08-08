@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	_ = model.InitRedis("35.197.129.138:6379", "admin123", 0)
+	_ = model.InitRedis("35.197.129.138:6379", "aa", 0)
 	redisClient, _ := model.NewRedisClient()
 	data := map[string]interface{}{
 		"name": "Hello",
