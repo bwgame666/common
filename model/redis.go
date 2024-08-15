@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
-	"log"
 	"sync"
 	"time"
 )
@@ -37,7 +36,7 @@ func InitRedisSentinel(sentinelAddr []string, passwd, name string, db int) *redi
 			})
 			pong, err := redisClient.Ping(context.Background()).Result()
 			if err != nil {
-				log.Fatalf("InitRedisSentinel failed: %s", err.Error())
+				fmt.Println("InitRedisSentinel failed: ", err.Error())
 			}
 			fmt.Println(pong, err)
 		})
@@ -62,7 +61,7 @@ func InitRedis(addr string, passwd string, db int) *redis.Client {
 			})
 			pong, err := redisClient.Ping(context.Background()).Result()
 			if err != nil {
-				log.Fatalf("InitRedis failed: %s", err.Error())
+				fmt.Println("InitRedis failed: ", err.Error())
 			}
 			fmt.Println(pong, err)
 		})
@@ -84,7 +83,7 @@ func (r *RedisClient) GetConn() *redis.Client {
 func (r *RedisClient) Set(k string, data interface{}) error {
 	err := r.client.Set(r.ctx, k, data, 0).Err()
 	if err != nil {
-		log.Fatalf("Failed to set data in Redis: %v", err)
+		fmt.Println("Failed to set data in Redis: ", err)
 		return err
 	}
 	return nil
@@ -93,7 +92,7 @@ func (r *RedisClient) Set(k string, data interface{}) error {
 func (r *RedisClient) Get(k string) (interface{}, error) {
 	val, err := r.client.Get(r.ctx, k).Result()
 	if err != nil {
-		log.Fatalf("Failed to get data from Redis: %v", err)
+		fmt.Println("Failed to get data from Redis: ", err)
 		return nil, err
 	}
 	return val, nil
@@ -102,7 +101,7 @@ func (r *RedisClient) Get(k string) (interface{}, error) {
 func (r *RedisClient) HSet(k string, data map[string]interface{}) error {
 	err := r.client.HSet(r.ctx, k, data).Err()
 	if err != nil {
-		log.Fatalf("Failed to set data in Redis: %v", err)
+		fmt.Println("Failed to set data in Redis: ", err)
 		return err
 	}
 	return nil
@@ -111,7 +110,7 @@ func (r *RedisClient) HSet(k string, data map[string]interface{}) error {
 func (r *RedisClient) HSetBy(k string, field string, value interface{}) error {
 	err := r.client.HSet(r.ctx, k, field, value).Err()
 	if err != nil {
-		log.Fatalf("Failed to set data in Redis: %v", err)
+		fmt.Println("Failed to set data in Redis: ", err)
 		return err
 	}
 	return nil
@@ -120,7 +119,7 @@ func (r *RedisClient) HSetBy(k string, field string, value interface{}) error {
 func (r *RedisClient) HIncrBy(k string, field string, value int64) error {
 	_, err := r.client.HIncrBy(r.ctx, k, field, value).Result()
 	if err != nil {
-		log.Fatalf("Failed to decrement age in Redis: %v", err)
+		fmt.Println("Failed to decrement age in Redis: ", err)
 		return err
 	}
 	return nil
@@ -129,7 +128,7 @@ func (r *RedisClient) HIncrBy(k string, field string, value int64) error {
 func (r *RedisClient) HGetBy(k string, field string) (interface{}, error) {
 	val, err := r.client.HGet(r.ctx, k, field).Result()
 	if err != nil {
-		log.Fatalf("Failed to get data from Redis: %v", err)
+		fmt.Println("Failed to get data from Redis: ", err)
 		return nil, err
 	}
 	return val, nil
@@ -138,7 +137,7 @@ func (r *RedisClient) HGetBy(k string, field string) (interface{}, error) {
 func (r *RedisClient) HGetALL(k string) (map[string]string, error) {
 	val, err := r.client.HGetAll(r.ctx, k).Result()
 	if err != nil {
-		log.Fatalf("Failed to get data from Redis: %v", err)
+		fmt.Println("Failed to get data from Redis: ", err)
 		return nil, err
 	}
 	return val, nil
