@@ -44,7 +44,7 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		}
 		funcType := reflect.TypeOf(handle)
 		funcValue := reflect.ValueOf(handle)
-		paramType := funcType.In(0)
+		paramType := funcType.In(1)
 		paramValue := reflect.New(paramType).Interface()
 
 		// 1、读取请求参数
@@ -66,7 +66,7 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		}
 
 		// 3、调用处理函数
-		argValues := []reflect.Value{reflect.ValueOf(req)}
+		argValues := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(req)}
 		returnValues := funcValue.Call(argValues)
 		resp := returnValues[0].Interface()
 
