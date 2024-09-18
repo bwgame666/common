@@ -68,12 +68,14 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		// 3、调用处理函数
 		argValues := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(req)}
 		returnValues := funcValue.Call(argValues)
-		resp := returnValues[0].Interface()
+		code := returnValues[0].Interface().(int)
+		msg := returnValues[1].Interface().(string)
+		d := returnValues[2].Interface()
 
 		// 4、返回结果
-		data.Code = 200
-		data.Message = "success"
-		data.Data = resp
+		data.Code = code
+		data.Message = msg
+		data.Data = d
 		svr.Response(ctx, data)
 	}
 }
