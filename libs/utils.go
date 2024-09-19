@@ -70,10 +70,20 @@ func Float64TStr(n float64, precision int) string {
 func StrTInt(s string) int {
 	i, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		fmt.Println("Error converting string to int32:", err)
+		fmt.Println("Error converting string to int32: ", s, err)
 		return 0
 	}
 	return int(i)
+}
+
+func StrTFloat64(s string) float64 {
+
+	floatValue, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		fmt.Println("error converting string to float64: ", s, err)
+		return 0.0
+	}
+	return floatValue
 }
 
 func Int32Sort(arr []int32) []int32 {
