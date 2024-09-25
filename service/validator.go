@@ -39,7 +39,7 @@ func getRequestArgs(ctx *fasthttp.RequestCtx, paramValue interface{}) error {
 func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		data := &ResponseData{
-			Code:    408002,
+			Code:    408000,
 			Message: "Parameter Invalid",
 		}
 		funcType := reflect.TypeOf(handle)
