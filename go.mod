@@ -12,6 +12,7 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/gorilla/websocket v1.5.3
+	github.com/minio/md5-simd v1.1.2
 	github.com/nats-io/nats.go v1.36.0
 	github.com/pelletier/go-toml v1.9.5
 	github.com/qiniu/qmgo v1.1.8

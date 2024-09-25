@@ -3,8 +3,10 @@ package libs
 import (
 	"context"
 	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	md5simd "github.com/minio/md5-simd"
 	"golang.org/x/sync/errgroup"
 	"os"
 	"os/signal"
@@ -100,4 +102,43 @@ func Int32Sort(arr []int32) []int32 {
 		arr[i] = int32(v)
 	}
 	return arr
+}
+
+func Hash(text string) string {
+
+	server := md5simd.NewServer()
+	md5Hash := server.NewHash()
+	_, _ = md5Hash.Write([]byte(text))
+	digest := md5Hash.Sum([]byte{})
+	encrypted := hex.EncodeToString(digest)
+
+	server.Close()
+	md5Hash.Close()
+
+	return encrypted
+}
+
+func Sign(apiKey string, params map[string][]string) string {
+	sortedParams := make([]string, 0, len(params))
+	for key := range params {
+		sortedParams = append(sortedParams, key)
+	}
+	sort.Strings(sortedParams)
+
+	var paramStr string
+	for _, key := range sortedParams {
+		value := params[key][0]
+		if value != "" {
+			if paramStr != "" {
+				paramStr += "&"
+			}
+			paramStr += key + "=" + value
+		}
+	}
+
+	signStr := apiKey + "&" + paramStr
+	sign := Hash(signStr)
+	//fmt.Println("Sign string:", signStr)
+	//fmt.Println("Sign:", sign)
+	return sign
 }
