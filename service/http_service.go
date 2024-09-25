@@ -115,6 +115,16 @@ func (that *HttpService) middlewareDecorator(handler fasthttp.RequestHandler) fa
 					Code:    408002,
 					Message: err.Error(),
 				}
+				switch err.Error() {
+				case "forbidden":
+					data.Code = 408001
+				case "unauthorized":
+					data.Code = 408002
+				case "not-whitelisted":
+					data.Code = 4008003
+				default:
+
+				}
 				that.Response(ctx, data)
 				return
 			}
