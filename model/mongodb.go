@@ -138,7 +138,8 @@ func (that *MongoClient) UpdateOne(id string, doc interface{}) error {
 		return err
 	}
 	filter := map[string]interface{}{"_id": objectID}
-	err = that.collection.UpdateOne(that.ctx, filter, doc)
+	update := map[string]interface{}{"$set": doc}
+	err = that.collection.UpdateOne(that.ctx, filter, update)
 	if err != nil {
 		return err
 	}

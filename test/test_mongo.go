@@ -54,26 +54,24 @@ func test() {
 	if err != nil {
 		fmt.Println("new mongo client failed: ")
 	}
-	_, err = mongoClient.AddOne(&TestI{
-		Test: 3,
-	})
-	if err != nil {
-		fmt.Println("3 failed: ", err)
-	}
-	_, err = mongoClient.AddOne(&TestI{
+	ObjId, err := mongoClient.AddOne(&TestI{
 		Test: 5,
 	})
 	if err != nil {
 		fmt.Println("5 failed: ", err)
 	}
+	err = mongoClient.UpdateOne(ObjId, &TestI{
+		Test: 6,
+	})
+	fmt.Println(err)
 }
 
 func main() {
-	qClient := model.InitMongoConnection("mongodb://127.0.0.1:27020/?replicaSet=rs0",
-		"user", "pass", "db")
+	qClient := model.InitMongoConnection("mongodb://35.197.129.138:27020/?replicaSet=rs0",
+		"bac", "pass", "bac")
 	if qClient == nil {
 		fmt.Println("connect failed")
 		return
 	}
-	testTransaction()
+	test()
 }
