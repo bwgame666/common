@@ -11,9 +11,11 @@ import (
 type ServerOption func(webSocketObj *WebSocket)
 
 type WebSocketConfig struct {
-	ServID int64  `yaml:"serv_id"`
-	Addr   string `yaml:"addr"`
-	Port   int    `yaml:"port"`
+	ServID   int64  `yaml:"serv_id"`
+	Addr     string `yaml:"addr"`
+	Port     int    `yaml:"port"`
+	certFile string `yaml:"cert_file"`
+	keyFile  string `yaml:"key_file"`
 }
 
 type WebSocket struct {
@@ -37,6 +39,9 @@ func NewWebSocket(conf *WebSocketConfig, initFunc ...ServerOption) *WebSocket {
 		defaultReceive: nil,
 	}
 	webSocketObj.listener = NewWebSocketListener(conf.Addr, conf.Port, webSocketObj.OnConnOpen, webSocketObj.OnConnClose)
+	if conf.certFile != "" && conf.keyFile != "" {
+		webSocketObj.listener.SetCerts(conf.certFile, conf.keyFile)
+	}
 	for _, iFunc := range initFunc {
 		iFunc(webSocketObj)
 	}
