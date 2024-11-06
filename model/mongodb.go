@@ -107,6 +107,10 @@ func (that *MongoClient) SetContext(ctx context.Context) {
 	that.ctx = ctx
 }
 
+func (that *MongoClient) GetContext() context.Context {
+	return that.ctx
+}
+
 func (that *MongoClient) GetCollection() *qmgo.Collection {
 	return that.collection
 }
