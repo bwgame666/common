@@ -23,10 +23,17 @@ func testTransaction() {
 	callback := func(sessCtx context.Context) (interface{}, error) {
 		mongoClient.SetContext(sessCtx)
 		mongoClient2.SetContext(sessCtx)
-		_, err = mongoClient.AddOne(&TestI{
+		dbId, err := mongoClient.AddOne(&TestI{
 			Test: 6,
 		})
 		if err != nil {
+			return nil, err
+		}
+		var data TestI
+		err2 := mongoClient.GetOne(dbId, &data)
+		fmt.Println(data)
+		if err2 != nil {
+			fmt.Println("get error: ", err2)
 			return nil, err
 		}
 		_, err = mongoClient2.AddOne(&TestI{
@@ -73,5 +80,6 @@ func main() {
 		fmt.Println("connect failed")
 		return
 	}
-	test()
+	//test()
+	testTransaction()
 }

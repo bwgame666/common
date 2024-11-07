@@ -81,7 +81,12 @@ func NewMongoClient(dbName, collectionName string) (*MongoClient, error) {
 }
 
 func (that *MongoClient) StartSession() *qmgo.Session {
-	s, err := that.client.Session()
+	opts := &qnOpts.SessionOptions{
+		SessionOptions: &options.SessionOptions{
+			DefaultReadPreference: readpref.Primary(), // 设置为主节点读取偏好, read preference in a transaction must be primary
+		},
+	}
+	s, err := that.client.Session(opts)
 	if err != nil {
 		fmt.Println("start mongo session failed: ", err)
 	}
