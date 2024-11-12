@@ -20,7 +20,6 @@ type MongoClient struct {
 	client     *qmgo.Client
 	database   *qmgo.Database
 	collection *qmgo.Collection
-	sess       *qmgo.Session
 	ctx        context.Context
 }
 
@@ -90,17 +89,15 @@ func (that *MongoClient) StartSession() *qmgo.Session {
 	if err != nil {
 		fmt.Println("start mongo session failed: ", err)
 	}
-	that.sess = s
-	return that.sess
+	return s
 }
 
-func (that *MongoClient) EndSession() {
-	that.sess.EndSession(context.Background())
-	that.sess = nil
+func (that *MongoClient) EndSession(sess *qmgo.Session) {
+	sess.EndSession(context.Background())
 }
 
-func (that *MongoClient) StatTransaction(cb func(sessCtx context.Context) (interface{}, error)) (interface{}, error) {
-	result, err := that.sess.StartTransaction(context.Background(), cb)
+func (that *MongoClient) StatTransaction(sess *qmgo.Session, cb func(sessCtx context.Context) (interface{}, error)) (interface{}, error) {
+	result, err := sess.StartTransaction(context.Background(), cb)
 	if err != nil {
 		fmt.Println("StartTransaction failed, err=", err)
 		return result, err
