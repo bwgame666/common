@@ -121,7 +121,7 @@ func (that *MongoClient) GetCollection() *qmgo.Collection {
 }
 
 func (that *MongoClient) AddOne(doc interface{}) (string, error) {
-	result, err := that.collection.InsertOne(that.ctx, doc)
+	result, err := that.collection.InsertOne(context.Background(), doc)
 	if err != nil {
 		return "", err
 	}
@@ -134,7 +134,7 @@ func (that *MongoClient) GetOne(id string, result interface{}) error {
 		return err
 	}
 	filter := map[string]interface{}{"_id": objectID}
-	err = that.collection.Find(that.ctx, filter).One(result)
+	err = that.collection.Find(context.Background(), filter).One(result)
 	if err != nil {
 		return err
 	}
@@ -148,7 +148,7 @@ func (that *MongoClient) UpdateOne(id string, doc interface{}) error {
 	}
 	filter := map[string]interface{}{"_id": objectID}
 	update := map[string]interface{}{"$set": doc}
-	err = that.collection.UpdateOne(that.ctx, filter, update)
+	err = that.collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func (that *MongoClient) DeleteOne(id string) error {
 	if err != nil {
 		return err
 	}
-	err = that.collection.RemoveId(that.ctx, objectID)
+	err = that.collection.RemoveId(context.Background(), objectID)
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func (that *MongoClient) DeleteOne(id string) error {
 }
 
 func (that *MongoClient) Query(filter interface{}, start int64, count int64, result interface{}) error {
-	err := that.collection.Find(that.ctx, filter).Skip(start).Limit(count).All(result)
+	err := that.collection.Find(context.Background(), filter).Skip(start).Limit(count).All(result)
 	if err != nil {
 		return err
 	}
