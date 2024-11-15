@@ -45,10 +45,10 @@ func testTransaction() {
 		return "success", nil
 	}
 
-	mongoClient.StartSession()
-	defer mongoClient.EndSession()
+	s := mongoClient.StartSession()
+	defer mongoClient.EndSession(s)
 
-	result, err := mongoClient.StatTransaction(callback)
+	result, err := mongoClient.StatTransaction(s, callback)
 	if err != nil {
 		fmt.Println(err)
 		fmt.Println(result)

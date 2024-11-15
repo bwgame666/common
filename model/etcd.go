@@ -85,6 +85,10 @@ func isDigit(s string) bool {
 	return true
 }
 
+func (that *EtcdClient) GetClient() *clientv3.Client {
+	return that.client
+}
+
 func (that *EtcdClient) Parse(key string, v interface{}) error {
 
 	ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
