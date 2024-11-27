@@ -16,6 +16,7 @@ type HttpService struct {
 	ApiTimeoutMsg   string
 	ApiTimeout      time.Duration
 	EncryptResponse bool
+	GzipResponse    bool
 	EncryptKey      string
 }
 
@@ -34,8 +35,13 @@ func New(middlewareList []MiddlewareFunc, encryptKey string, encryptResponse boo
 		ApiTimeoutMsg:   `{"code": 408001,"message":"The server response timed out. Please try again later."}`,
 		ApiTimeout:      time.Second * 30,
 		EncryptResponse: encryptResponse,
+		GzipResponse:    false,
 		EncryptKey:      encryptKey,
 	}
+}
+
+func (that *HttpService) EnableGzip(gzipResponse bool) {
+	that.GzipResponse = gzipResponse
 }
 
 func (that *HttpService) StartServer(addr string) {
@@ -89,7 +95,13 @@ func (that *HttpService) Response(ctx *fasthttp.RequestCtx, data *ResponseData) 
 	if !that.EncryptResponse {
 		ctx.SetStatusCode(200)
 		ctx.SetContentType("application/json")
-		ctx.SetBody(bytes)
+		if that.GzipResponse {
+			ctx.Response.Header.Set("Content-Encoding", "gzip")
+			gzippedData := fasthttp.AppendGzipBytes(nil, bytes)
+			ctx.SetBody(gzippedData)
+		} else {
+			ctx.SetBody(bytes)
+		}
 		return
 	}
 

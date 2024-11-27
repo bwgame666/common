@@ -11,6 +11,12 @@ type MqttClient struct {
 }
 
 func NewMqttClient(broker string, username string, passwd string) *MqttClient {
+	/*
+		// 添加多个 broker
+		    for _, broker := range brokers {
+		        opts.AddBroker(broker)
+		    }
+	*/
 	opts := mqtt.NewClientOptions().
 		AddBroker(broker).
 		SetClientID("go_mqtt_client").
