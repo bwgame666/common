@@ -1,6 +1,7 @@
 package mq
 
 import (
+	"github.com/bwgame666/common/libs"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"log"
 	"time"
@@ -19,7 +20,7 @@ func NewMqttClient(broker string, username string, passwd string) *MqttClient {
 	*/
 	opts := mqtt.NewClientOptions().
 		AddBroker(broker).
-		SetClientID("go_mqtt_client").
+		SetClientID(libs.RandStr(16)).
 		SetUsername(username).
 		SetPassword(passwd).
 		SetKeepAlive(60 * time.Second).
