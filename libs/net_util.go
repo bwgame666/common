@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+func IsIP(address string) bool {
+	return IsIPv4(address) || IsIPv6(address)
+}
+
 func isIPv4(ip net.IP) bool {
 	return ip != nil && ip.To4() != nil
 }
