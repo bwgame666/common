@@ -133,7 +133,7 @@ func (that *HttpService) middlewareDecorator(handler fasthttp.RequestHandler) fa
 				case "unauthorized":
 					data.Code = 408002
 				case "not-whitelisted":
-					data.Code = 4008003
+					data.Code = 408003
 				default:
 
 				}
