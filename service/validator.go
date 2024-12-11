@@ -41,6 +41,7 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		data := &ResponseData{
 			Code:    408000,
 			Message: "Parameter Invalid",
+			Data:    make(map[string]interface{}),
 		}
 		funcType := reflect.TypeOf(handle)
 		funcValue := reflect.ValueOf(handle)
