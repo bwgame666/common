@@ -17,6 +17,7 @@ func TelegramNotice(botId string, chatId int64, msg string, proxy string) {
 	bot, err := tgbotapi.NewBotAPIWithClient(botId, tgbotapi.APIEndpoint, httpClient)
 	if err != nil {
 		fmt.Printf("bot init error: %s\n", err.Error())
+		return
 	}
 
 	bot.Debug = false
