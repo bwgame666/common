@@ -20,7 +20,8 @@ func getRequestArgs(ctx *fasthttp.RequestCtx, paramValue interface{}) error {
 		jsonB, _ := sonic.Marshal(requestMap)
 		err := libs.JsonUnmarshal(jsonB, paramValue)
 		if err != nil {
-			fmt.Println("Error:", err)
+			fmt.Println("[getRequestArgs] request args: ", requestArg)
+			fmt.Println("[getRequestArgs] Error:", err)
 			return err
 		}
 	} else if ctx.IsPost() || ctx.IsPut() {
@@ -44,12 +45,12 @@ func getRequestArgs(ctx *fasthttp.RequestCtx, paramValue interface{}) error {
 					return err
 				}
 			}
-		
+
 		*/
 		//fmt.Println("Request body: ", requestBody)
 		err := libs.JsonUnmarshal(requestBody, paramValue)
 		if err != nil {
-			fmt.Println("[getRequestArgs] Request body: ", requestBody)
+			fmt.Println("[getRequestArgs] Request body: ", string(requestBody))
 			fmt.Println("[getRequestArgs] JsonUnmarshal Error:", err)
 			return err
 		}
