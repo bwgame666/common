@@ -1,11 +1,14 @@
 package service
 
 import (
+	"bytes"
+	"compress/gzip"
 	"fmt"
 	"github.com/bwgame666/common/libs"
 	"github.com/bytedance/sonic"
 	"github.com/go-playground/validator/v10"
 	"github.com/valyala/fasthttp"
+	"io"
 	"reflect"
 )
 
@@ -26,10 +29,28 @@ func getRequestArgs(ctx *fasthttp.RequestCtx, paramValue interface{}) error {
 	} else if ctx.IsPost() || ctx.IsPut() {
 		// 读取post请求参数
 		requestBody := ctx.PostBody()
+		if string(ctx.Request.Header.Peek("Accept-Encoding")) == "gzip" {
+			// 创建一个字节读取器
+			gzReader := bytes.NewReader(requestBody)
+			gz, err := gzip.NewReader(gzReader)
+			if err != nil {
+				fmt.Println(ctx, "Failed to create gzip reader: ", err)
+				return err
+			}
+			defer gz.Close()
+
+			// 读取解压后的数据
+			requestBody, err = io.ReadAll(gz)
+			if err != nil {
+				fmt.Println(ctx, "Failed to read gzip body: ", err)
+				return err
+			}
+		}
 		//fmt.Println("Request body: ", requestBody)
 		err := libs.JsonUnmarshal(requestBody, paramValue)
 		if err != nil {
-			fmt.Println("Error:", err)
+			fmt.Println("[getRequestArgs] Request body: ", requestBody)
+			fmt.Println("[getRequestArgs] JsonUnmarshal Error:", err)
 			return err
 		}
 	}
@@ -51,7 +72,7 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		// 1、读取请求参数
 		err := getRequestArgs(ctx, &paramValue)
 		if err != nil {
-			fmt.Println("Error:", err)
+			fmt.Println("[validatorDecorator] getRequestArgs Error:", err)
 			svr.Response(ctx, data)
 			return
 		}
@@ -61,7 +82,7 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		validate := validator.New()
 		errV := validate.Struct(req)
 		if errV != nil {
-			fmt.Println("Validation errors:", errV)
+			fmt.Println("[validatorDecorator] Validation errors:", errV)
 			svr.Response(ctx, data)
 			return
 		}
