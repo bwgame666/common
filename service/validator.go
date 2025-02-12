@@ -7,16 +7,17 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/valyala/fasthttp"
 	"reflect"
+	"strconv"
 )
 
 func getRequestArgs(ctx *fasthttp.RequestCtx, paramValue interface{}) error {
 	if ctx.IsGet() || ctx.IsDelete() {
 		requestArg := ctx.QueryArgs()
-		//fmt.Println("request args: ", requestArg)
-		requestMap := make(map[string]interface{})
-		requestArg.VisitAll(func(key, value []byte) {
-			requestMap[string(key)] = string(value)
-		})
+		//requestMap := make(map[string]interface{})
+		//requestArg.VisitAll(func(key, value []byte) {
+		//	requestMap[string(key)] = string(value)
+		//})
+		requestMap, _ := bindQueryParams(ctx, paramValue)
 		jsonB, _ := sonic.Marshal(requestMap)
 		err := libs.JsonUnmarshal(jsonB, paramValue)
 		if err != nil {
@@ -56,6 +57,45 @@ func getRequestArgs(ctx *fasthttp.RequestCtx, paramValue interface{}) error {
 		}
 	}
 	return nil
+}
+
+func bindQueryParams(ctx *fasthttp.RequestCtx, params interface{}) (map[string]interface{}, error) {
+	requestMap := make(map[string]interface{})
+
+	values := ctx.QueryArgs()
+	v := reflect.ValueOf(params).Elem()
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Type().Field(i)
+		tag := field.Tag.Get("json")
+
+		if tag == "" {
+			continue
+		}
+
+		value := string(values.Peek(tag))
+		fmt.Println("bindQueryParams", tag, field.Type, value)
+
+		// 将值转换为相应的类型并赋值
+		switch field.Type.Kind() {
+		case reflect.Int, reflect.Int64:
+			intValue, err := strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return requestMap, fmt.Errorf("invalid value for %s: %s", tag, value)
+			}
+			requestMap[tag] = intValue
+		case reflect.Float32, reflect.Float64:
+			floatValue, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return requestMap, fmt.Errorf("invalid value for %s: %s", tag, value)
+			}
+			requestMap[tag] = floatValue
+		case reflect.String:
+			requestMap[tag] = value
+		}
+	}
+
+	return requestMap, nil
 }
 
 func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.RequestHandler {
