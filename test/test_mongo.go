@@ -56,6 +56,19 @@ func testTransaction() {
 	fmt.Println(result)
 }
 
+func testReadWrite() {
+	mongoClient, err := model.NewMongoClient("bac", "test1")
+	if err != nil {
+		fmt.Println("new mongo client failed: ")
+	}
+	_, err = mongoClient.AddOne(&TestI{
+		Test: 6,
+	})
+	var data []TestI
+	_ = mongoClient.Query(map[string]interface{}{}, 0, 100, &data)
+	fmt.Println(data)
+}
+
 func test() {
 	mongoClient, err := model.NewMongoClient("bac", "test1")
 	if err != nil {
@@ -74,12 +87,13 @@ func test() {
 }
 
 func main() {
-	qClient := model.InitMongoConnection("mongodb://35.197.129.138:27020/?replicaSet=rs0",
-		"bac", "pass", "bac")
+	qClient := model.InitMongoConnection("mongodb://35.197.129.138:27020,35.197.129.138:27018,35.197.129.138:27019/?replicaSet=rs0",
+		"bac", "bac@123", "bac")
 	if qClient == nil {
 		fmt.Println("connect failed")
 		return
 	}
 	//test()
-	testTransaction()
+	//testTransaction()
+	testReadWrite()
 }
