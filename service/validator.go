@@ -1,12 +1,16 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"github.com/bwgame666/common/libs"
 	"github.com/bytedance/sonic"
-	"github.com/go-playground/validator/v10"
+	"github.com/modern-go/reflect2"
 	"github.com/valyala/fasthttp"
+	"math"
 	"reflect"
+	"strconv"
+	"strings"
 )
 
 func getRequestArgs(ctx *fasthttp.RequestCtx, paramValue interface{}) error {
@@ -26,26 +30,6 @@ func getRequestArgs(ctx *fasthttp.RequestCtx, paramValue interface{}) error {
 	} else if ctx.IsPost() || ctx.IsPut() {
 		// 读取post请求参数
 		requestBody := ctx.PostBody()
-		/*
-			if string(ctx.Request.Header.Peek("Accept-Encoding")) == "gzip" {
-				// 创建一个字节读取器
-				gzReader := bytes.NewReader(requestBody)
-				gz, err := gzip.NewReader(gzReader)
-				if err != nil {
-					fmt.Println(ctx, "Failed to create gzip reader: ", err)
-					return err
-				}
-				defer gz.Close()
-
-				// 读取解压后的数据
-				requestBody, err = io.ReadAll(gz)
-				if err != nil {
-					fmt.Println(ctx, "Failed to read gzip body: ", err)
-					return err
-				}
-			}
-
-		*/
 		//fmt.Println("Request body: ", requestBody)
 		err := libs.JsonUnmarshal(requestBody, paramValue)
 		if err != nil {
@@ -55,6 +39,251 @@ func getRequestArgs(ctx *fasthttp.RequestCtx, paramValue interface{}) error {
 		}
 	}
 	return nil
+}
+
+func BindArgs(ctx *fasthttp.RequestCtx, objs interface{}) error {
+	rt := reflect2.TypeOf(objs)
+	rtElem := rt
+
+	if rt.Kind() != reflect.Ptr {
+		return errors.New("argument 2 should be map or ptr")
+	}
+
+	rt = rt.(reflect2.PtrType).Elem()
+	rtElem = rt
+
+	if rtElem.Kind() != reflect.Struct {
+		return errors.New("non-structure type not supported yet")
+	}
+
+	s := rtElem.(reflect2.StructType)
+
+	for i := 0; i < s.NumField(); i++ {
+
+		f := s.Field(i)
+
+		min := int64(0)
+		max := int64(math.MaxInt64)
+
+		name := f.Tag().Get("json")
+		name = strings.Split(name, ",")[0]
+		if len(name) == 0 {
+			name = strings.ToLower(f.Name())
+		}
+
+		msg := f.Tag().Get("msg")
+		if len(msg) == 0 {
+			msg = "Parameter Invalid"
+		}
+
+		rules := validate(f.Tag().Get("validate"))
+
+		rule := getValue(rules, "rule")
+		required := getValue(rules, "required")
+		def := getValue(rules, "default")
+
+		minStr := getValue(rules, "min")
+		if len(minStr) > 0 {
+			if v, err := strconv.ParseInt(f.Tag().Get("min"), 10, 64); err == nil {
+				min = v
+			}
+		}
+		maxStr := getValue(rules, "max")
+		if len(maxStr) > 0 {
+			if v, err := strconv.ParseInt(f.Tag().Get("max"), 10, 64); err == nil {
+				max = v
+			}
+		}
+
+		defaultVal := ""
+		if string(ctx.Method()) == "GET" {
+			defaultVal = strings.TrimSpace(string(ctx.QueryArgs().Peek(name)))
+		} else if string(ctx.Method()) == "POST" {
+			defaultVal = strings.TrimSpace(string(ctx.PostArgs().Peek(name)))
+		}
+
+		nums := len(def)
+		check := true //默认需要校验
+		if defaultVal == "" {
+			if nums > 0 {
+				defaultVal = def
+			}
+
+			// 是必选参数，且没有默认值
+			if required != "0" && defaultVal == "" {
+				if rule == "none" {
+					check = false
+				} else {
+					return errors.New(name + " not found")
+				}
+			} else {
+				check = false
+			}
+		}
+
+		if check {
+			switch rule {
+			case "digit":
+				if !CheckStringDigit(defaultVal) || !CheckIntScope(defaultVal, min, max) {
+					return errors.New(msg)
+				}
+			case "digitString":
+				if !CheckStringDigit(defaultVal) || !CheckStringLength(defaultVal, int(min), int(max)) {
+					return errors.New(msg)
+				}
+			case "sDigit":
+				if !CheckStringCommaDigit(defaultVal) || !CheckStringLength(defaultVal, int(min), int(max)) {
+					return errors.New(msg)
+				}
+			case "sAlpha":
+				if !CheckStringCommaAlpha(defaultVal) || !CheckStringLength(defaultVal, int(min), int(max)) {
+					return errors.New(msg)
+				}
+			case "url":
+				if !CheckUrl(defaultVal) {
+					return errors.New(msg)
+				}
+			case "alnum":
+				if !CheckStringAlnum(defaultVal) || !CheckStringLength(defaultVal, int(min), int(max)) {
+					return errors.New(msg)
+				}
+			case "priv":
+				if !isPriv(defaultVal) {
+					return errors.New(msg)
+				}
+			case "dateTime":
+				if !CheckDateTime(defaultVal) {
+					return errors.New(msg)
+				}
+			case "date":
+				if !CheckDate(defaultVal) {
+					return errors.New(msg)
+				}
+			case "time":
+				if !checkTime(defaultVal) {
+					return errors.New(msg)
+				}
+			case "chn":
+				if !CheckStringCHN(defaultVal) {
+					return errors.New(msg)
+				}
+			case "module":
+				if !CheckStringModule(defaultVal) || !CheckStringLength(defaultVal, int(min), int(max)) {
+					return errors.New(msg)
+				}
+			case "float":
+				if !CheckFloat(defaultVal) {
+					return errors.New(msg)
+				}
+			case "vnphone":
+				if !IsVietnamesePhone(defaultVal) {
+					return errors.New(msg)
+				}
+			case "filter":
+				if !CheckStringLength(defaultVal, int(min), int(max)) {
+					return errors.New(msg)
+				}
+
+				defaultVal = FilterInjection(defaultVal)
+			case "uname": //会员账号
+				if !CheckUName(defaultVal, int(min), int(max)) {
+					return errors.New(msg)
+				}
+			case "upwd": //会员密码
+				if !CheckUPassword(defaultVal, int(min), int(max)) {
+					return errors.New(msg)
+				}
+			default:
+				break
+			}
+		}
+
+		switch f.Type().Kind() {
+		case reflect.Bool:
+			if val, err := strconv.ParseBool(defaultVal); err == nil {
+				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
+			}
+		case reflect.Int:
+			if val, err := strconv.Atoi(defaultVal); err == nil {
+				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
+			}
+		case reflect.Int8:
+			if val, err := strconv.ParseInt(defaultVal, 10, 8); err == nil {
+				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
+			}
+		case reflect.Int16:
+			if val, err := strconv.ParseInt(defaultVal, 10, 16); err == nil {
+				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
+			}
+		case reflect.Int32:
+			if val, err := strconv.ParseInt(defaultVal, 10, 32); err == nil {
+				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
+			}
+		case reflect.Int64:
+			if val, err := strconv.ParseInt(defaultVal, 10, 64); err == nil {
+				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
+			}
+		case reflect.Uint:
+			if val, err := strconv.ParseUint(defaultVal, 10, 64); err == nil {
+				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
+			}
+		case reflect.Uint8:
+			if val, err := strconv.ParseUint(defaultVal, 10, 8); err == nil {
+				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
+			}
+		case reflect.Uint16:
+			if val, err := strconv.ParseUint(defaultVal, 10, 16); err == nil {
+				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
+			}
+		case reflect.Uint32:
+			if val, err := strconv.ParseUint(defaultVal, 10, 32); err == nil {
+				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
+			}
+		case reflect.Uint64:
+			if val, err := strconv.ParseUint(defaultVal, 10, 64); err == nil {
+				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
+			}
+		case reflect.Uintptr:
+			if val, err := strconv.ParseUint(defaultVal, 10, 64); err == nil {
+				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
+			}
+		case reflect.Float32:
+			if val, err := strconv.ParseFloat(defaultVal, 32); err == nil {
+				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
+			}
+		case reflect.Float64:
+			if val, err := strconv.ParseFloat(defaultVal, 64); err == nil {
+				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
+			}
+		case reflect.String:
+			f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(defaultVal))
+		}
+	}
+
+	return nil
+}
+
+func validate(val string) map[string]string {
+	result := make(map[string]string)
+
+	values := strings.Split(val, ",")
+	for _, item := range values {
+		parts := strings.SplitN(item, "=", 2) // 使用 SplitN 以限制分割次数
+		if len(parts) != 2 {
+			result[parts[0]] = "true"
+		} else {
+			result[parts[0]] = parts[1]
+		}
+	}
+
+	return result
+}
+
+func getValue(m map[string]string, key string) string {
+	if value, exists := m[key]; exists {
+		return value
+	}
+	return ""
 }
 
 func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.RequestHandler {
@@ -69,25 +298,35 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		paramType := funcType.In(1)
 		paramValue := reflect.New(paramType).Interface()
 
-		// 1、读取请求参数
-		err := getRequestArgs(ctx, reflect.ValueOf(paramValue).Elem())
-		if err != nil {
-			fmt.Println("[validatorDecorator] getRequestArgs Error:", err)
-			svr.Response(ctx, data)
-			return
-		}
+		//// 1、读取请求参数
+		//err := getRequestArgs(ctx, reflect.ValueOf(paramValue).Elem())
+		//if err != nil {
+		//	fmt.Println("[validatorDecorator] getRequestArgs Error:", err)
+		//	svr.Response(ctx, data)
+		//	return
+		//}
+		//
 
 		// 2、请求参数校验
-		req := reflect.ValueOf(paramValue).Elem().Interface()
-		validate := validator.New()
-		errV := validate.Struct(req)
-		if errV != nil {
-			fmt.Println("[validatorDecorator] Validation errors:", errV)
+		//req := reflect.ValueOf(paramValue).Elem().Interface()
+		//validate := validator.New()
+		//errV := validate.Struct(req)
+		//if errV != nil {
+		//	fmt.Println("[validatorDecorator] Validation errors:", errV)
+		//	svr.Response(ctx, data)
+		//	return
+		//}
+
+		err := BindArgs(ctx, reflect.ValueOf(paramValue).Elem())
+		if err != nil {
+			fmt.Println("[validatorDecorator] Validation errors:", err)
+			data.Data = err.Error()
 			svr.Response(ctx, data)
 			return
 		}
 
 		// 3、调用处理函数
+		req := reflect.ValueOf(paramValue).Elem().Interface()
 		argValues := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(req)}
 		returnValues := funcValue.Call(argValues)
 		code := returnValues[0].Interface().(int)
