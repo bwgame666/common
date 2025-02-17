@@ -298,14 +298,14 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		paramType := funcType.In(1)
 		paramValue := reflect.New(paramType).Interface()
 
-		//// 1、读取请求参数
+		/* 1、读取请求参数
 		err := getRequestArgs(ctx, reflect.ValueOf(paramValue).Elem())
 		if err != nil {
 			fmt.Println("[validatorDecorator] getRequestArgs Error:", err)
 			svr.Response(ctx, data)
 			return
 		}
-		//
+		*/
 
 		// 2、请求参数校验
 		//req := reflect.ValueOf(paramValue).Elem().Interface()
@@ -317,7 +317,7 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		//	return
 		//}
 
-		err = BindArgs(ctx, reflect.ValueOf(paramValue).Elem())
+		err := BindArgs(ctx, &paramValue)
 		if err != nil {
 			fmt.Println("[validatorDecorator] Validation errors:", err)
 			data.Data = err.Error()
