@@ -7,20 +7,27 @@ import (
 )
 
 type HelloReq struct {
-	Name string `json:"name" validate:"required,min=3,max=20"`
-	Desc string `json:"desc" validate:""`
+	Name  string `json:"name" rules:"required,rule=str,min=3,max=20" msg:"name length should be 3 to 20"`
+	state string `json:"state" rules:"required,rule=str,min=0,max=1" msg:"错误的state, [0,1]"`
+	Desc  string `json:"desc"`
 }
 
 type HelloResp struct {
 	Msg string `json:"msg" validate:"required"`
 }
 
-func HelloControl(ctx *fasthttp.RequestCtx, req *HelloReq) (resp HelloResp) {
+func HelloControl(ctx *fasthttp.RequestCtx, req *HelloReq) (code int, msg string, resp HelloResp) {
+	err := service.BindArgs(ctx, req)
+	if err != nil {
+		resp.Msg = err.Error()
+		return 400800, "invalid", resp
+	}
+
 	fmt.Println(string(ctx.Path()))
 	fmt.Println(string(ctx.Request.Header.Peek("token")))
 	fmt.Println(req.Name, req.Desc)
 	resp.Msg = "hello world!"
-	return resp
+	return 200, "success", resp
 }
 
 func main() {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/bwgame666/common/libs"
 	"github.com/bytedance/sonic"
+	"github.com/go-playground/validator/v10"
 	"github.com/modern-go/reflect2"
 	"github.com/valyala/fasthttp"
 	"math"
@@ -43,21 +44,17 @@ func getRequestArgs(ctx *fasthttp.RequestCtx, paramValue interface{}) error {
 
 func BindArgs(ctx *fasthttp.RequestCtx, objs interface{}) error {
 	rt := reflect2.TypeOf(objs)
-	rtElem := rt
-
 	if rt.Kind() != reflect.Ptr {
 		return errors.New("argument 2 should be map or ptr")
 	}
 
-	rt = rt.(reflect2.PtrType).Elem()
-	rtElem = rt
-
+	rtElem := rt.(reflect2.PtrType).Elem()
 	if rtElem.Kind() != reflect.Struct {
 		return errors.New("non-structure type not supported yet")
 	}
 
 	s := rtElem.(reflect2.StructType)
-
+	fmt.Println("s", s.NumField(), s)
 	for i := 0; i < s.NumField(); i++ {
 
 		f := s.Field(i)
@@ -76,7 +73,7 @@ func BindArgs(ctx *fasthttp.RequestCtx, objs interface{}) error {
 			msg = "Parameter Invalid"
 		}
 
-		rules := validate(f.Tag().Get("validate"))
+		rules := validate(f.Tag().Get("rules"))
 
 		rule := getValue(rules, "rule")
 		required := getValue(rules, "required")
@@ -84,13 +81,13 @@ func BindArgs(ctx *fasthttp.RequestCtx, objs interface{}) error {
 
 		minStr := getValue(rules, "min")
 		if len(minStr) > 0 {
-			if v, err := strconv.ParseInt(f.Tag().Get("min"), 10, 64); err == nil {
+			if v, err := strconv.ParseInt(minStr, 10, 64); err == nil {
 				min = v
 			}
 		}
 		maxStr := getValue(rules, "max")
 		if len(maxStr) > 0 {
-			if v, err := strconv.ParseInt(f.Tag().Get("max"), 10, 64); err == nil {
+			if v, err := strconv.ParseInt(maxStr, 10, 64); err == nil {
 				max = v
 			}
 		}
@@ -110,7 +107,7 @@ func BindArgs(ctx *fasthttp.RequestCtx, objs interface{}) error {
 			}
 
 			// 是必选参数，且没有默认值
-			if required != "0" && defaultVal == "" {
+			if required == "1" && defaultVal == "" {
 				if rule == "none" {
 					check = false
 				} else {
@@ -120,9 +117,18 @@ func BindArgs(ctx *fasthttp.RequestCtx, objs interface{}) error {
 				check = false
 			}
 		}
+		fmt.Println("name", name, "check", check, "required", required, "default", defaultVal, "min", min, "max", max, "rule", rule)
 
 		if check {
 			switch rule {
+			case "str":
+				if !CheckStringLength(defaultVal, int(min), int(max)) {
+					return errors.New(msg)
+				}
+			case "int":
+				if !CheckStringDigit(defaultVal) || !CheckIntScope(defaultVal, min, max) {
+					return errors.New(msg)
+				}
 			case "digit":
 				if !CheckStringDigit(defaultVal) || !CheckIntScope(defaultVal, min, max) {
 					return errors.New(msg)
@@ -270,7 +276,7 @@ func validate(val string) map[string]string {
 	for _, item := range values {
 		parts := strings.SplitN(item, "=", 2) // 使用 SplitN 以限制分割次数
 		if len(parts) != 2 {
-			result[parts[0]] = "true"
+			result[parts[0]] = "1"
 		} else {
 			result[parts[0]] = parts[1]
 		}
@@ -298,35 +304,25 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		paramType := funcType.In(1)
 		paramValue := reflect.New(paramType).Interface()
 
-		/* 1、读取请求参数
-		err := getRequestArgs(ctx, reflect.ValueOf(paramValue).Elem())
+		// 1、读取请求参数
+		err := getRequestArgs(ctx, &paramValue)
 		if err != nil {
 			fmt.Println("[validatorDecorator] getRequestArgs Error:", err)
 			svr.Response(ctx, data)
 			return
 		}
-		*/
 
 		// 2、请求参数校验
-		//req := reflect.ValueOf(paramValue).Elem().Interface()
-		//validate := validator.New()
-		//errV := validate.Struct(req)
-		//if errV != nil {
-		//	fmt.Println("[validatorDecorator] Validation errors:", errV)
-		//	svr.Response(ctx, data)
-		//	return
-		//}
-
-		err := BindArgs(ctx, &paramValue)
-		if err != nil {
-			fmt.Println("[validatorDecorator] Validation errors:", err)
-			data.Data = err.Error()
+		req := reflect.ValueOf(paramValue).Elem().Interface()
+		validate := validator.New()
+		errV := validate.Struct(req)
+		if errV != nil {
+			fmt.Println("[validatorDecorator] Validation errors:", errV)
 			svr.Response(ctx, data)
 			return
 		}
 
 		// 3、调用处理函数
-		req := reflect.ValueOf(paramValue).Elem().Interface()
 		argValues := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(req)}
 		returnValues := funcValue.Call(argValues)
 		code := returnValues[0].Interface().(int)
