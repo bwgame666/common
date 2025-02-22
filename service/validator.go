@@ -6,7 +6,6 @@ import (
 	"github.com/bwgame666/common/libs"
 	"github.com/bytedance/sonic"
 	"github.com/go-playground/validator/v10"
-	"github.com/modern-go/reflect2"
 	"github.com/valyala/fasthttp"
 	"math"
 	"reflect"
@@ -42,38 +41,38 @@ func getRequestArgs(ctx *fasthttp.RequestCtx, paramValue interface{}) error {
 	return nil
 }
 
-func BindArgs(ctx *fasthttp.RequestCtx, objs interface{}) error {
-	rt := reflect2.TypeOf(objs)
+func ValidateArgs(objs interface{}) error {
+	rt := reflect.ValueOf(objs)
 	if rt.Kind() != reflect.Ptr {
 		return errors.New("argument 2 should be map or ptr")
 	}
 
-	rtElem := rt.(reflect2.PtrType).Elem()
+	rtElem := rt.Elem()
 	if rtElem.Kind() != reflect.Struct {
 		return errors.New("non-structure type not supported yet")
 	}
 
-	s := rtElem.(reflect2.StructType)
+	s := rtElem
 	fmt.Println("s", s.NumField(), s)
 	for i := 0; i < s.NumField(); i++ {
 
-		f := s.Field(i)
+		f := s.Type().Field(i)
 
 		min := int64(0)
 		max := int64(math.MaxInt64)
 
-		name := f.Tag().Get("json")
+		name := f.Tag.Get("json")
 		name = strings.Split(name, ",")[0]
 		if len(name) == 0 {
-			name = strings.ToLower(f.Name())
+			name = strings.ToLower(f.Name)
 		}
 
-		msg := f.Tag().Get("msg")
+		msg := f.Tag.Get("msg")
 		if len(msg) == 0 {
 			msg = "Parameter Invalid"
 		}
 
-		rules := validate(f.Tag().Get("rules"))
+		rules := validate(f.Tag.Get("rules"))
 
 		rule := getValue(rules, "rule")
 		required := getValue(rules, "required")
@@ -93,10 +92,8 @@ func BindArgs(ctx *fasthttp.RequestCtx, objs interface{}) error {
 		}
 
 		defaultVal := ""
-		if string(ctx.Method()) == "GET" {
-			defaultVal = strings.TrimSpace(string(ctx.QueryArgs().Peek(name)))
-		} else if string(ctx.Method()) == "POST" {
-			defaultVal = strings.TrimSpace(string(ctx.PostArgs().Peek(name)))
+		if s.Field(i).CanInterface() {
+			defaultVal = fmt.Sprintf("%v", s.Field(i).Interface())
 		}
 
 		nums := len(def)
@@ -202,67 +199,6 @@ func BindArgs(ctx *fasthttp.RequestCtx, objs interface{}) error {
 			default:
 				break
 			}
-		}
-
-		switch f.Type().Kind() {
-		case reflect.Bool:
-			if val, err := strconv.ParseBool(defaultVal); err == nil {
-				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
-			}
-		case reflect.Int:
-			if val, err := strconv.Atoi(defaultVal); err == nil {
-				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
-			}
-		case reflect.Int8:
-			if val, err := strconv.ParseInt(defaultVal, 10, 8); err == nil {
-				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
-			}
-		case reflect.Int16:
-			if val, err := strconv.ParseInt(defaultVal, 10, 16); err == nil {
-				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
-			}
-		case reflect.Int32:
-			if val, err := strconv.ParseInt(defaultVal, 10, 32); err == nil {
-				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
-			}
-		case reflect.Int64:
-			if val, err := strconv.ParseInt(defaultVal, 10, 64); err == nil {
-				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
-			}
-		case reflect.Uint:
-			if val, err := strconv.ParseUint(defaultVal, 10, 64); err == nil {
-				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
-			}
-		case reflect.Uint8:
-			if val, err := strconv.ParseUint(defaultVal, 10, 8); err == nil {
-				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
-			}
-		case reflect.Uint16:
-			if val, err := strconv.ParseUint(defaultVal, 10, 16); err == nil {
-				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
-			}
-		case reflect.Uint32:
-			if val, err := strconv.ParseUint(defaultVal, 10, 32); err == nil {
-				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
-			}
-		case reflect.Uint64:
-			if val, err := strconv.ParseUint(defaultVal, 10, 64); err == nil {
-				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
-			}
-		case reflect.Uintptr:
-			if val, err := strconv.ParseUint(defaultVal, 10, 64); err == nil {
-				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
-			}
-		case reflect.Float32:
-			if val, err := strconv.ParseFloat(defaultVal, 32); err == nil {
-				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
-			}
-		case reflect.Float64:
-			if val, err := strconv.ParseFloat(defaultVal, 64); err == nil {
-				f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(val))
-			}
-		case reflect.String:
-			f.UnsafeSet(reflect2.PtrOf(objs), reflect2.PtrOf(defaultVal))
 		}
 	}
 
