@@ -101,6 +101,7 @@ func BindArgs(ctx *fasthttp.RequestCtx, objs interface{}) error {
 
 		nums := len(def)
 		check := true //默认需要校验
+		fmt.Println("name", name, "required", required, "default", defaultVal, "min", min, "max", max, "rule", rule)
 		if defaultVal == "" {
 			if nums > 0 {
 				defaultVal = def
@@ -117,7 +118,6 @@ func BindArgs(ctx *fasthttp.RequestCtx, objs interface{}) error {
 				check = false
 			}
 		}
-		fmt.Println("name", name, "check", check, "required", required, "default", defaultVal, "min", min, "max", max, "rule", rule)
 
 		if check {
 			switch rule {
