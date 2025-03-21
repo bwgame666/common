@@ -45,6 +45,24 @@ func (param *Param) Name() string {
 	return param.name
 }
 
+// FullName gets parameter field name with indexPath
+func (param *Param) FullName() string {
+	if len(param.indexPath) < 2 {
+		return param.name
+	}
+	var result string
+	if len(param.indexPath) > 1 {
+		for idx, indexPath := range param.indexPath {
+			if idx == 0 {
+				result = indexPath.Name
+			} else {
+				result += fmt.Sprintf(".%s", indexPath.Name)
+			}
+		}
+	}
+	return result
+}
+
 // IsRequired tests if the param is declared
 func (param *Param) IsRequired() bool {
 	return param.isRequired
@@ -78,8 +96,8 @@ func (param *Param) validate(value reflect.Value) (err error) {
 
 	switch value.Kind() {
 	case reflect.Struct:
-		// skip
-	case reflect.Slice:
+		return nil
+	case reflect.Slice, reflect.Array:
 		if err = param.validateLen(value.Len(), strMin, strMax, param.name); err != nil {
 			return err
 		}
@@ -99,16 +117,11 @@ func (param *Param) validate(value reflect.Value) (err error) {
 		if err = param.validateLen(value.Len(), strMin, strMax, param.name); err != nil {
 			return err
 		}
-		if reg, ok := param.tags["regexp"]; ok {
-			if err = param.validateRegexp(value.String(), reg, param.name); err != nil {
-				return err
-			}
-		}
 	}
 
 	if rule, ok := param.tags["rule"]; ok { // 自定义规则校验
 		if fn, ok := defaultArgsWare.rule[rule]; ok {
-			if err = fn(value.String(), param.arg); err != nil {
+			if err = fn(value.Interface(), param.FullName(), param.arg); err != nil {
 				return err
 			}
 		}

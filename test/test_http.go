@@ -2,13 +2,17 @@ package main
 
 import (
 	"fmt"
+	"github.com/bwgame666/common/argsware"
 	"github.com/bwgame666/common/service"
 	"github.com/valyala/fasthttp"
+	"slices"
+	"strconv"
+	"strings"
 )
 
 type HelloReq struct {
 	Name   string `json:"name" bind:"required,min=3,max=20" msg:"name length should be 3 to 20"`
-	Status int    `json:"status" bind:"required"`
+	Status []int  `json:"status" bind:"required,rule=status,min=1,max=3" arg:"10,11,12,13,14,15"`
 	Desc   string `json:"desc" bind:"default=test"`
 }
 
@@ -23,11 +27,28 @@ func HelloControl(ctx *fasthttp.RequestCtx, req *HelloReq) (code int, msg string
 	return 200, "success", resp
 }
 
+func CheckStatus(fieldValue interface{}, fieldName, paramArg string) error {
+	value, ok := fieldValue.([]int)
+	if !ok {
+		return argsware.NewArgsError("CheckStatus", fieldName, "the fieldValue must be a []int")
+	}
+
+	params := strings.Split(paramArg, ",")
+	for _, v := range value {
+		if !slices.Contains(params, strconv.Itoa(v)) {
+			return argsware.NewArgsError("CheckStatus", fieldName, fmt.Sprintf("%d is not in %s", v, paramArg))
+		}
+	}
+
+	return nil
+}
+
 func main() {
 
 	middleWares := []service.MiddlewareFunc{
 		//service.DecryptMiddleware,
 	}
+	argsware.Register("status", CheckStatus)
 
 	httpServer := service.New(middleWares, "sdfasdfqca", false)
 	httpServer.Get("/hello", HelloControl)

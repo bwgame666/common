@@ -1,14 +1,33 @@
 package argsware
 
 import (
-	"errors"
 	"fmt"
 	"github.com/bwgame666/common/libs"
 	"github.com/valyala/fasthttp"
 	"reflect"
 	"regexp"
+	"strings"
 	"sync"
 )
+
+// IsFormBody 判断请求体是否为 form 类型
+func IsFormBody(ctx *fasthttp.RequestCtx) bool {
+	contentType := string(ctx.Request.Header.ContentType())
+	// 提取主类型部分
+	mainContentType := strings.Split(contentType, ";")[0]
+	// 判断是否为 form 类型
+	return mainContentType == "application/x-www-form-urlencoded" ||
+		mainContentType == "multipart/form-data"
+}
+
+// IsJSONBody 判断请求体是否为 JSON 类型
+func IsJSONBody(ctx *fasthttp.RequestCtx) bool {
+	contentType := string(ctx.Request.Header.ContentType())
+	// 提取主类型部分
+	mainContentType := strings.Split(contentType, ";")[0]
+	// 判断是否为 JSON 类型
+	return mainContentType == "application/json"
+}
 
 func JsonBindArgs(ctx *fasthttp.RequestCtx, structPointer interface{}) error {
 	name := reflect.TypeOf(structPointer).String()
@@ -49,7 +68,7 @@ func JsonBindArgs(ctx *fasthttp.RequestCtx, structPointer interface{}) error {
 					return param.myError(err.Error())
 				}
 			} else if param.IsRequired() {
-				return NewArgsError(param.apiName, param.name, "is required.")
+				return NewArgsError(param.apiName, param.FullName(), "is required.")
 			}
 		}
 
@@ -93,7 +112,7 @@ func QueryBindArgs(ctx *fasthttp.RequestCtx, structPointer interface{}) error {
 				return param.myError(err.Error())
 			}
 		} else if param.IsRequired() {
-			return NewArgsError(param.apiName, param.name, "is required.")
+			return NewArgsError(param.apiName, param.FullName(), "is required.")
 		}
 
 		if err = param.validate(value); err != nil {
@@ -133,7 +152,7 @@ func FormBindArgs(ctx *fasthttp.RequestCtx, structPointer interface{}) error {
 				return param.myError(err.Error())
 			}
 		} else if param.IsRequired() {
-			return NewArgsError(param.apiName, param.name, "is required.")
+			return NewArgsError(param.apiName, param.FullName(), "is required.")
 		}
 
 		if err = param.validate(value); err != nil {
@@ -183,7 +202,7 @@ var (
 	}
 )
 
-type RuleChecker func(string, string) error
+type RuleChecker func(interface{}, string, string) error
 
 type ArgsWare struct {
 	lib  map[string]*ParamsAPI
@@ -229,14 +248,20 @@ func (c *ArgsWare) register(structPointer interface{}) (*ParamsAPI, error) {
 	return m, nil
 }
 
-func checkReg(val, reg string) error {
-	matched, err := regexp.MatchString(reg, val)
+func checkReg(fieldValue interface{}, fieldName, param string) error {
+	value, ok := fieldValue.(string)
+	if !ok {
+		return NewArgsError("checkReg", fieldName, "the fieldValue must be a string")
+	}
+
+	matched, err := regexp.MatchString(param, value)
 	if err != nil {
 		return err
 	}
 	if !matched {
-		return errors.New(fmt.Sprintf("%s not match regexp: %s", val, reg))
+		return NewArgsError("checkReg", fieldName, fmt.Sprintf("%s not match regexp %s", value, param))
 	}
+
 	return nil
 }
 
