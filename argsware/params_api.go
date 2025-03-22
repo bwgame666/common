@@ -83,6 +83,9 @@ func (m *ParamsAPI) addFields(parentIndexPath []IndexPath, t reflect.Type, v ref
 		}
 
 		tag, ok := field.Tag.Lookup("bind")
+		if !ok {
+			tag, ok = field.Tag.Lookup("validate")
+		}
 		if tag == "-" {
 			continue
 		}
