@@ -3,11 +3,12 @@ package service
 import (
 	b64 "encoding/base64"
 	"fmt"
+	"time"
+
 	"github.com/bwgame666/common/libs"
 	"github.com/fasthttp/router"
 	"github.com/valyala/fasthttp"
 	"github.com/xxtea/xxtea-go/xxtea"
-	"time"
 )
 
 type HttpService struct {
@@ -134,6 +135,8 @@ func (that *HttpService) middlewareDecorator(handler fasthttp.RequestHandler) fa
 					data.Code = 408002
 				case "not-whitelisted":
 					data.Code = 408003
+				case "system-in-maintain":
+					data.Code = 408004
 				default:
 
 				}
