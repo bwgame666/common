@@ -16,7 +16,8 @@ import (
 )
 
 type (
-	CustomFormatter struct{}
+	CustomFormatter struct {
+	}
 
 	LoggerManager struct {
 		loggers map[string]*Logger
@@ -59,6 +60,8 @@ const (
 	EnvProd = "prod"
 	EnvUat  = "uat"
 	EnvDev  = "dev"
+
+	defaultTimestampFormat = time.RFC3339
 )
 
 var (
@@ -72,10 +75,31 @@ var (
 		"info":  InfoLevel,
 		"debug": DebugLevel,
 	}
+
+	loggerLevelStringMap = map[Level]string{
+		OffLevel:   "OFF",
+		LogLevel:   "L",
+		ErrorLevel: "E",
+		WarnLevel:  "W",
+		InfoLevel:  "I",
+		DebugLevel: "D",
+	}
 )
 
 func (f *CustomFormatter) Format(entry *log.Entry) ([]byte, error) {
-	return []byte(entry.Message), nil
+	pid := os.Getpid()
+
+	logMessage := fmt.Sprintf("%s %s [%s:%d] %s.%s():%d %s\n",
+		entry.Time.Format(defaultTimestampFormat),
+		entry.Data["@level"],
+		entry.Data["@logName"],
+		pid,
+		entry.Data["@fileName"],
+		entry.Data["@funcName"],
+		entry.Data["@line"],
+		entry.Message)
+
+	return []byte(logMessage), nil
 }
 
 func GetLogger(name string) *Logger {
@@ -140,7 +164,7 @@ func NewLogManager(etcdClient *commonModel.EtcdClient, env string) (err error) {
 		fmt.Println("Logger 尝试读取ETCD配置: /global/log.toml Error:", err)
 	}
 	// 尝试从本地读取配置
-	if err != nil {
+	if err != nil || etcdClient == nil {
 		// 获取当前工作目录
 		dir, _ := os.Getwd()
 
@@ -221,8 +245,6 @@ func (l *Logger) Debug(args ...interface{}) {
 	if l.level < DebugLevel {
 		return
 	}
-	message := fmt.Sprint(args...)
-	currentTime := time.Now().Format("2006-01-02 15:04:05.000Z07")
 	pc, file, line, ok := runtime.Caller(1)
 	if !ok {
 		file = "unknown"
@@ -232,19 +254,21 @@ func (l *Logger) Debug(args ...interface{}) {
 	fileName = strings.TrimSuffix(fileName, path.Ext(fileName))
 	fullFuncName := runtime.FuncForPC(pc).Name()
 	funcName := fullFuncName[strings.LastIndex(fullFuncName, ".")+1:]
-	pid := os.Getpid()
 
-	logMessage := fmt.Sprintf("%s D [%s:%d] %s.%s():%d %s\n",
-		currentTime, l.name, pid, fileName, funcName, line, message)
-	l.impl.Debug(logMessage)
+	l.impl.WithFields(log.Fields{
+		"@logName":  l.name,
+		"@fileName": fileName,
+		"@funcName": funcName,
+		"@line":     line,
+		"@level":    loggerLevelStringMap[DebugLevel],
+	}).Debug(args)
 }
 
 func (l *Logger) Info(args ...interface{}) {
 	if l.level < InfoLevel {
 		return
 	}
-	message := fmt.Sprint(args...)
-	currentTime := time.Now().Format("2006-01-02 15:04:05.000Z07")
+
 	pc, file, line, ok := runtime.Caller(1)
 	if !ok {
 		file = "unknown"
@@ -254,19 +278,21 @@ func (l *Logger) Info(args ...interface{}) {
 	fileName = strings.TrimSuffix(fileName, path.Ext(fileName))
 	fullFuncName := runtime.FuncForPC(pc).Name()
 	funcName := fullFuncName[strings.LastIndex(fullFuncName, ".")+1:]
-	pid := os.Getpid()
 
-	logMessage := fmt.Sprintf("%s I [%s:%d] %s.%s():%d %s\n",
-		currentTime, l.name, pid, fileName, funcName, line, message)
-	l.impl.Info(logMessage)
+	l.impl.WithFields(log.Fields{
+		"@logName":  l.name,
+		"@fileName": fileName,
+		"@funcName": funcName,
+		"@line":     line,
+		"@level":    loggerLevelStringMap[InfoLevel],
+	}).Info(args)
 }
 
 func (l *Logger) Warn(args ...interface{}) {
 	if l.level < WarnLevel {
 		return
 	}
-	message := fmt.Sprint(args...)
-	currentTime := time.Now().Format("2006-01-02 15:04:05.000Z07")
+
 	pc, file, line, ok := runtime.Caller(1)
 	if !ok {
 		file = "unknown"
@@ -276,20 +302,20 @@ func (l *Logger) Warn(args ...interface{}) {
 	fileName = strings.TrimSuffix(fileName, path.Ext(fileName))
 	fullFuncName := runtime.FuncForPC(pc).Name()
 	funcName := fullFuncName[strings.LastIndex(fullFuncName, ".")+1:]
-	pid := os.Getpid()
 
-	logMessage := fmt.Sprintf("%s W [%s:%d] %s.%s():%d %s\n",
-		currentTime, l.name, pid, fileName, funcName, line, message)
-
-	l.impl.Warn(logMessage)
+	l.impl.WithFields(log.Fields{
+		"@logName":  l.name,
+		"@fileName": fileName,
+		"@funcName": funcName,
+		"@line":     line,
+		"@level":    loggerLevelStringMap[WarnLevel],
+	}).Warn(args)
 }
 
 func (l *Logger) Error(args ...interface{}) {
 	if l.level < ErrorLevel {
 		return
 	}
-	message := fmt.Sprint(args...)
-	currentTime := time.Now().Format("2006-01-02 15:04:05.000Z07")
 	pc, file, line, ok := runtime.Caller(1)
 	if !ok {
 		file = "unknown"
@@ -299,20 +325,20 @@ func (l *Logger) Error(args ...interface{}) {
 	fileName = strings.TrimSuffix(fileName, path.Ext(fileName))
 	fullFuncName := runtime.FuncForPC(pc).Name()
 	funcName := fullFuncName[strings.LastIndex(fullFuncName, ".")+1:]
-	pid := os.Getpid()
 
-	logMessage := fmt.Sprintf("%s E [%s:%d] %s.%s():%d %s\n",
-		currentTime, l.name, pid, fileName, funcName, line, message)
-
-	l.impl.Error(logMessage)
+	l.impl.WithFields(log.Fields{
+		"@logName":  l.name,
+		"@fileName": fileName,
+		"@funcName": funcName,
+		"@line":     line,
+		"@level":    loggerLevelStringMap[ErrorLevel],
+	}).Error(args)
 }
 
 func (l *Logger) Log(args ...interface{}) {
 	if l.level < LogLevel {
 		return
 	}
-	message := fmt.Sprint(args...)
-	currentTime := time.Now().Format("2006-01-02 15:04:05.000Z07")
 	pc, file, line, ok := runtime.Caller(1)
 	if !ok {
 		file = "unknown"
@@ -322,10 +348,12 @@ func (l *Logger) Log(args ...interface{}) {
 	fileName = strings.TrimSuffix(fileName, path.Ext(fileName))
 	fullFuncName := runtime.FuncForPC(pc).Name()
 	funcName := fullFuncName[strings.LastIndex(fullFuncName, ".")+1:]
-	pid := os.Getpid()
 
-	logMessage := fmt.Sprintf("%s L [%s:%d] %s.%s():%d %s\n",
-		currentTime, l.name, pid, fileName, funcName, line, message)
-
-	l.impl.Log(log.InfoLevel, logMessage)
+	l.impl.WithFields(log.Fields{
+		"@logName":  l.name,
+		"@fileName": fileName,
+		"@funcName": funcName,
+		"@line":     line,
+		"@level":    loggerLevelStringMap[LogLevel],
+	}).Info(args)
 }
