@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -39,14 +40,20 @@ func (m *ParamsAPI) parseTags(s string) map[string]string {
 	return r
 }
 
-func (m *ParamsAPI) toSnake(s string) string {
+func (m *ParamsAPI) toSnake(fieldName, jsonTag string) string {
 	buf := bytes.NewBufferString("")
-	for i, v := range s {
-		if i > 0 && v >= 'A' && v <= 'Z' {
-			buf.WriteRune('_')
+
+	jsonTag = strings.Split(jsonTag, ",")[0]
+	buf.WriteString(jsonTag)
+	if len(jsonTag) == 0 {
+		for i, v := range fieldName {
+			if i > 0 && v >= 'A' && v <= 'Z' {
+				buf.WriteRune('_')
+			}
+			buf.WriteRune(v)
 		}
-		buf.WriteRune(v)
 	}
+
 	return strings.ToLower(buf.String())
 }
 
@@ -66,9 +73,11 @@ func (m *ParamsAPI) addFields(parentIndexPath []IndexPath, t reflect.Type, v ref
 	for i := 0; i < t.NumField(); i++ {
 		indexPath := make([]IndexPath, deep)
 		copy(indexPath, parentIndexPath)
-		indexPath[deep-1] = IndexPath{Name: m.toSnake(t.Field(i).Name), Index: i}
 
 		var field = t.Field(i)
+		jsonTag, _ := field.Tag.Lookup("json")
+		fmt.Println("jsonTag", jsonTag)
+		indexPath[deep-1] = IndexPath{Name: m.toSnake(field.Name, jsonTag), Index: i}
 
 		if field.Type.Kind() == reflect.Struct {
 			path := indexPath
@@ -119,7 +128,7 @@ func (m *ParamsAPI) addFields(parentIndexPath []IndexPath, t reflect.Type, v ref
 		}
 
 		if fd.name, ok = parsedTags["name"]; !ok {
-			fd.name = m.toSnake(field.Name)
+			fd.name = m.toSnake(field.Name, jsonTag)
 		}
 		indexPath[deep-1] = IndexPath{Name: fd.name, Index: i}
 

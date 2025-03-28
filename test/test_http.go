@@ -13,7 +13,7 @@ import (
 type HelloReq struct {
 	Name   string `json:"name" bind:"required,min=3,max=20" msg:"name length should be 3 to 20"`
 	Status []int  `json:"status" bind:"required,rule=status,min=1,max=3" arg:"10,11,12,13,14,15"`
-	Desc   string `json:"desc" bind:"default=test"`
+	DescID string `json:"desc,omitempty" bind:"required"`
 }
 
 type HelloResp struct {
@@ -23,7 +23,7 @@ type HelloResp struct {
 func HelloControl(ctx *fasthttp.RequestCtx, req *HelloReq) (code int, msg string, resp HelloResp) {
 	fmt.Println(string(ctx.Path()))
 	fmt.Println(string(ctx.Request.Header.Peek("token")))
-	resp.Msg = fmt.Sprintf("hello world! %s, status: %d, desc: %s", req.Name, req.Status, req.Desc)
+	resp.Msg = fmt.Sprintf("hello world! %s, status: %d, desc: %s", req.Name, req.Status, req.DescID)
 	return 200, "success", resp
 }
 
