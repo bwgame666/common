@@ -106,7 +106,7 @@ func (param *Param) validate(value reflect.Value) (err error) {
 			return err
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		if err = param.validateInt(value.Int(), strMin, strMax, param.name); err != nil {
+		if err = param.validateUint(value.Uint(), strMin, strMax, param.name); err != nil {
 			return err
 		}
 	case reflect.Float32, reflect.Float64:
@@ -186,6 +186,28 @@ func (param *Param) validateInt(v int64, min, max, paramName string) error {
 	}
 	if len(max) > 0 {
 		maxInt, err := strconv.ParseInt(max, 10, 64)
+		if err != nil {
+			return err
+		}
+		if v > maxInt {
+			return NewValidationError(ValidationErrorValueTooBig, paramName)
+		}
+	}
+	return nil
+}
+
+func (param *Param) validateUint(v uint64, min, max, paramName string) error {
+	if len(min) > 0 {
+		minInt, err := strconv.ParseUint(min, 10, 64)
+		if err != nil {
+			return err
+		}
+		if v < minInt {
+			return NewValidationError(ValidationErrorValueTooSmall, paramName)
+		}
+	}
+	if len(max) > 0 {
+		maxInt, err := strconv.ParseUint(max, 10, 64)
 		if err != nil {
 			return err
 		}
