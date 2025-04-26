@@ -1,0 +1,31 @@
+nats_hook = true
+file_appender    = true
+console_appender = true
+
+[nats]
+servers = [ "35.197.129.138:4222" ]
+username = "admin"
+password = "admin123"
+
+[file]
+# 日志文件路径
+file_path   = "./logs/app.log"
+# 日志文件最大大小（MB）
+max_size    = 500
+# 最多保留的旧日志文件数量
+max_backups = 9
+# 保留旧日志文件的最大天数
+max_age     = 7
+# 是否压缩
+compress    = true
+
+[level]
+# 格式: 日志名称 = level名称
+# 日志名称区分大小写，如果名称中带有`.`，需要把名称使用""
+# level名称: off,log,error,warn,info,debug
+# 举例
+# "gameHub.ops" = "info"
+# common = "debug"
+
+"gameHub.ops" = "info"
+common = "debug"

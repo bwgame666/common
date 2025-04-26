@@ -183,14 +183,9 @@ func NewLogManager(etcdClient *commonModel.EtcdClient, env string) (err error) {
 		fmt.Println("Logger 使用默认配置")
 		conf = &LogConf{
 			ConsoleAppender: true,
-			FileAppender:    true,
-			File: LogFileConf{
-				FilePath:   "./logs/app.log",
-				MaxSize:    500,
-				MaxBackups: 9,
-				MaxAge:     30,
-				Compress:   true,
-			},
+			FileAppender:    false,
+			NatsHook:        false,
+
 			Level: make(map[string]string),
 		}
 	}
@@ -218,6 +213,15 @@ func NewLogManager(etcdClient *commonModel.EtcdClient, env string) (err error) {
 			},
 		}
 		writers = append(writers, fileAppender)
+	}
+
+	if conf.NatsHook {
+		natsHook, err := NewNatsHook(conf.Nats.Servers, conf.Nats.Username, conf.Nats.Password)
+		if err != nil {
+			fmt.Println("Failed to create Nats hook:", err)
+		} else {
+			l.AddHook(natsHook)
+		}
 	}
 
 	multiWriter := io.MultiWriter(writers...)
@@ -261,7 +265,8 @@ func (l *Logger) Debug(args ...interface{}) {
 		"@funcName": funcName,
 		"@line":     line,
 		"@level":    loggerLevelStringMap[DebugLevel],
-	}).Debug(args)
+		"@telegram": false,
+	}).Debug(args...)
 }
 
 func (l *Logger) Info(args ...interface{}) {
@@ -285,7 +290,8 @@ func (l *Logger) Info(args ...interface{}) {
 		"@funcName": funcName,
 		"@line":     line,
 		"@level":    loggerLevelStringMap[InfoLevel],
-	}).Info(args)
+		"@telegram": false,
+	}).Info(args...)
 }
 
 func (l *Logger) Warn(args ...interface{}) {
@@ -309,7 +315,33 @@ func (l *Logger) Warn(args ...interface{}) {
 		"@funcName": funcName,
 		"@line":     line,
 		"@level":    loggerLevelStringMap[WarnLevel],
-	}).Warn(args)
+		"@telegram": false,
+	}).Warn(args...)
+}
+
+func (l *Logger) WarnT(args ...interface{}) {
+	if l.level < WarnLevel {
+		return
+	}
+
+	pc, file, line, ok := runtime.Caller(1)
+	if !ok {
+		file = "unknown"
+		line = 0
+	}
+	fileName := path.Base(file)
+	fileName = strings.TrimSuffix(fileName, path.Ext(fileName))
+	fullFuncName := runtime.FuncForPC(pc).Name()
+	funcName := fullFuncName[strings.LastIndex(fullFuncName, ".")+1:]
+
+	l.impl.WithFields(log.Fields{
+		"@logName":  l.name,
+		"@fileName": fileName,
+		"@funcName": funcName,
+		"@line":     line,
+		"@level":    loggerLevelStringMap[WarnLevel],
+		"@telegram": true,
+	}).Warn(args...)
 }
 
 func (l *Logger) Error(args ...interface{}) {
@@ -332,7 +364,32 @@ func (l *Logger) Error(args ...interface{}) {
 		"@funcName": funcName,
 		"@line":     line,
 		"@level":    loggerLevelStringMap[ErrorLevel],
-	}).Error(args)
+		"@telegram": false,
+	}).Error(args...)
+}
+
+func (l *Logger) ErrorT(args ...interface{}) {
+	if l.level < ErrorLevel {
+		return
+	}
+	pc, file, line, ok := runtime.Caller(1)
+	if !ok {
+		file = "unknown"
+		line = 0
+	}
+	fileName := path.Base(file)
+	fileName = strings.TrimSuffix(fileName, path.Ext(fileName))
+	fullFuncName := runtime.FuncForPC(pc).Name()
+	funcName := fullFuncName[strings.LastIndex(fullFuncName, ".")+1:]
+
+	l.impl.WithFields(log.Fields{
+		"@logName":  l.name,
+		"@fileName": fileName,
+		"@funcName": funcName,
+		"@line":     line,
+		"@level":    loggerLevelStringMap[ErrorLevel],
+		"@telegram": true,
+	}).Error(args...)
 }
 
 func (l *Logger) Log(args ...interface{}) {
@@ -355,5 +412,30 @@ func (l *Logger) Log(args ...interface{}) {
 		"@funcName": funcName,
 		"@line":     line,
 		"@level":    loggerLevelStringMap[LogLevel],
-	}).Info(args)
+		"@telegram": false,
+	}).Info(args...)
+}
+
+func (l *Logger) LogT(args ...interface{}) {
+	if l.level < LogLevel {
+		return
+	}
+	pc, file, line, ok := runtime.Caller(1)
+	if !ok {
+		file = "unknown"
+		line = 0
+	}
+	fileName := path.Base(file)
+	fileName = strings.TrimSuffix(fileName, path.Ext(fileName))
+	fullFuncName := runtime.FuncForPC(pc).Name()
+	funcName := fullFuncName[strings.LastIndex(fullFuncName, ".")+1:]
+
+	l.impl.WithFields(log.Fields{
+		"@logName":  l.name,
+		"@fileName": fileName,
+		"@funcName": funcName,
+		"@line":     line,
+		"@level":    loggerLevelStringMap[LogLevel],
+		"@telegram": true,
+	}).Info(args...)
 }
