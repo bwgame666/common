@@ -70,6 +70,7 @@ func (h *NatsHook) Fire(entry *logrus.Entry) error {
 	ts := time.Now()
 	data := map[string]interface{}{
 		"_index":     fmt.Sprintf("%s_%04d%02d", index, ts.Year(), ts.Month()),
+		"@name":      entry.Data["@logName"],
 		"@level":     entry.Data["@level"],
 		"@pos":       fmt.Sprintf("%s.%s():%d", entry.Data["@fileName"], entry.Data["@funcName"], entry.Data["@line"]),
 		"@content":   entry.Message,
