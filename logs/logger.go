@@ -233,7 +233,7 @@ func NewLogManager(etcdClient *commonModel.EtcdClient, env string) (err error) {
 }
 
 func (l *LoggerManager) GetLoggerLevel(loggerName string, defaultLevel Level) Level {
-	if levelName, ok := l.conf.Level[strings.ToLower(loggerName)]; ok {
+	if levelName, ok := l.conf.Level[loggerName]; ok {
 		if level, ok := loggerLevelMap[strings.ToLower(levelName)]; ok {
 			return level
 		}

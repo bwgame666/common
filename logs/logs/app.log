@@ -272,3 +272,59 @@
 2025-04-28T09:07:35+08:00 W [gameHub.debug:59362] logger_test.TestLogger_Level_Debug():104 test for info
 2025-04-28T09:07:35+08:00 I [gameHub.debug:59362] logger_test.TestLogger_Level_Debug():105 test for info
 2025-04-28T09:07:35+08:00 D [gameHub.debug:59362] logger_test.TestLogger_Level_Debug():106 test for info debug....
+2025-04-28T11:56:58+08:00 L [gameHub.tele:62826] logger_test.TestLogger_tele():29 telegram test for info
+2025-04-28T11:56:58+08:00 E [gameHub.tele:62826] logger_test.TestLogger_tele():30 telegram test for info
+2025-04-28T11:56:58+08:00 W [gameHub.tele:62826] logger_test.TestLogger_tele():31 telegram test for info
+2025-04-28T11:56:58+08:00 L [common:62826] logger_test.TestLogger_common():37 test for info
+2025-04-28T11:56:58+08:00 E [common:62826] logger_test.TestLogger_common():38 test for info
+2025-04-28T11:56:58+08:00 W [common:62826] logger_test.TestLogger_common():39 test for info
+2025-04-28T11:56:58+08:00 I [common:62826] logger_test.TestLogger_common():40 test for info
+2025-04-28T11:56:58+08:00 D [common:62826] logger_test.TestLogger_common():41 test for info
+2025-04-28T11:56:58+08:00 L [gameHub.ops:62826] logger_test.TestLogger_dot():47 test for info
+2025-04-28T11:56:58+08:00 E [gameHub.ops:62826] logger_test.TestLogger_dot():48 test for info
+2025-04-28T11:56:58+08:00 W [gameHub.ops:62826] logger_test.TestLogger_dot():49 test for info
+2025-04-28T11:56:58+08:00 I [gameHub.ops:62826] logger_test.TestLogger_dot():50 test for info
+2025-04-28T11:56:58+08:00 D [gameHub.ops:62826] logger_test.TestLogger_dot():51 test for info
+2025-04-28T11:56:58+08:00 L [gameHub.log:62826] logger_test.TestLogger_Level_log():58 test for info
+2025-04-28T11:56:58+08:00 L [gameHub.error:62826] logger_test.TestLogger_Level_Error():69 test for info
+2025-04-28T11:56:58+08:00 E [gameHub.error:62826] logger_test.TestLogger_Level_Error():70 test for info
+2025-04-28T11:56:58+08:00 L [gameHub.warn:62826] logger_test.TestLogger_Level_Warn():80 test for info
+2025-04-28T11:56:58+08:00 E [gameHub.warn:62826] logger_test.TestLogger_Level_Warn():81 test for info
+2025-04-28T11:56:58+08:00 W [gameHub.warn:62826] logger_test.TestLogger_Level_Warn():82 test for info
+2025-04-28T11:56:58+08:00 L [gameHub.info:62826] logger_test.TestLogger_Level_Info():91 test for info
+2025-04-28T11:56:58+08:00 E [gameHub.info:62826] logger_test.TestLogger_Level_Info():92 test for info
+2025-04-28T11:56:58+08:00 W [gameHub.info:62826] logger_test.TestLogger_Level_Info():93 test for info
+2025-04-28T11:56:58+08:00 I [gameHub.info:62826] logger_test.TestLogger_Level_Info():94 test for info
+2025-04-28T11:56:58+08:00 L [gameHub.debug:62826] logger_test.TestLogger_Level_Debug():102 test for info
+2025-04-28T11:56:58+08:00 E [gameHub.debug:62826] logger_test.TestLogger_Level_Debug():103 test for info
+2025-04-28T11:56:58+08:00 W [gameHub.debug:62826] logger_test.TestLogger_Level_Debug():104 test for info
+2025-04-28T11:56:58+08:00 I [gameHub.debug:62826] logger_test.TestLogger_Level_Debug():105 test for info
+2025-04-28T11:56:58+08:00 D [gameHub.debug:62826] logger_test.TestLogger_Level_Debug():106 test for info debug....
+2025-04-28T14:24:52+08:00 L [gameHub.tele:65249] logger_test.TestLogger_tele():29 telegram test for info
+2025-04-28T14:24:52+08:00 E [gameHub.tele:65249] logger_test.TestLogger_tele():30 telegram test for info
+2025-04-28T14:24:52+08:00 W [gameHub.tele:65249] logger_test.TestLogger_tele():31 telegram test for info
+2025-04-28T14:24:52+08:00 L [common:65249] logger_test.TestLogger_common():37 test for info
+2025-04-28T14:24:52+08:00 E [common:65249] logger_test.TestLogger_common():38 test for info
+2025-04-28T14:24:52+08:00 W [common:65249] logger_test.TestLogger_common():39 test for info
+2025-04-28T14:24:52+08:00 I [common:65249] logger_test.TestLogger_common():40 test for info
+2025-04-28T14:24:52+08:00 D [common:65249] logger_test.TestLogger_common():41 test for info
+2025-04-28T14:24:52+08:00 L [gameHub.ops:65249] logger_test.TestLogger_dot():47 test for info
+2025-04-28T14:24:52+08:00 E [gameHub.ops:65249] logger_test.TestLogger_dot():48 test for info
+2025-04-28T14:24:52+08:00 W [gameHub.ops:65249] logger_test.TestLogger_dot():49 test for info
+2025-04-28T14:24:52+08:00 I [gameHub.ops:65249] logger_test.TestLogger_dot():50 test for info
+2025-04-28T14:24:52+08:00 D [gameHub.ops:65249] logger_test.TestLogger_dot():51 test for info
+2025-04-28T14:24:52+08:00 L [gameHub.log:65249] logger_test.TestLogger_Level_log():58 test for info
+2025-04-28T14:24:52+08:00 L [gameHub.error:65249] logger_test.TestLogger_Level_Error():69 test for info
+2025-04-28T14:24:52+08:00 E [gameHub.error:65249] logger_test.TestLogger_Level_Error():70 test for info
+2025-04-28T14:24:52+08:00 L [gameHub.warn:65249] logger_test.TestLogger_Level_Warn():80 test for info
+2025-04-28T14:24:52+08:00 E [gameHub.warn:65249] logger_test.TestLogger_Level_Warn():81 test for info
+2025-04-28T14:24:52+08:00 W [gameHub.warn:65249] logger_test.TestLogger_Level_Warn():82 test for info
+2025-04-28T14:24:52+08:00 L [gameHub.info:65249] logger_test.TestLogger_Level_Info():91 test for info
+2025-04-28T14:24:52+08:00 E [gameHub.info:65249] logger_test.TestLogger_Level_Info():92 test for info
+2025-04-28T14:24:52+08:00 W [gameHub.info:65249] logger_test.TestLogger_Level_Info():93 test for info
+2025-04-28T14:24:52+08:00 I [gameHub.info:65249] logger_test.TestLogger_Level_Info():94 test for info
+2025-04-28T14:24:52+08:00 L [gameHub.debug:65249] logger_test.TestLogger_Level_Debug():102 test for info
+2025-04-28T14:24:52+08:00 E [gameHub.debug:65249] logger_test.TestLogger_Level_Debug():103 test for info
+2025-04-28T14:24:52+08:00 W [gameHub.debug:65249] logger_test.TestLogger_Level_Debug():104 test for info
+2025-04-28T14:24:52+08:00 I [gameHub.debug:65249] logger_test.TestLogger_Level_Debug():105 test for info
+2025-04-28T14:24:52+08:00 D [gameHub.debug:65249] logger_test.TestLogger_Level_Debug():106 test for info debug....
