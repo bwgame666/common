@@ -1,10 +1,13 @@
 package logs
 
 import (
+	"context"
 	"fmt"
 	commonModel "github.com/bwgame666/common/model"
+	"github.com/fsnotify/fsnotify"
 	"github.com/pelletier/go-toml"
 	log "github.com/sirupsen/logrus"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"io"
 	"os"
@@ -122,7 +125,6 @@ func GetLogger(name string) *Logger {
 		}
 
 		level := loggerManager.GetLoggerLevel(name, defaultLevel)
-
 		logger = &Logger{
 			name:  name,
 			impl:  loggerManager.logImpl,
@@ -133,28 +135,6 @@ func GetLogger(name string) *Logger {
 	return logger
 }
 
-// 新增：ConsoleAppender的Write方法实现
-func (c *ConsoleAppender) Write(p []byte) (n int, err error) {
-	return os.Stdout.Write(p)
-}
-
-// Close 修改：ConsoleAppender的Close方法实现
-func (c *ConsoleAppender) Close() error {
-	// 控制台输出无需关闭，直接返回nil
-	return nil
-}
-
-// 新增：FileAppender的Write方法实现
-func (f *FileAppender) Write(p []byte) (n int, err error) {
-	return f.fileWriter.Write(p)
-}
-
-// Close 修改：FileAppender的Close方法实现
-func (f *FileAppender) Close() error {
-	// 关闭文件资源
-	return f.fileWriter.Close()
-}
-
 func NewLogManager(etcdClient *commonModel.EtcdClient, env string) (err error) {
 	conf := &LogConf{}
 
@@ -162,6 +142,9 @@ func NewLogManager(etcdClient *commonModel.EtcdClient, env string) (err error) {
 	if etcdClient != nil {
 		err = etcdClient.ParseTomlStruct("/global/log.toml", conf)
 		fmt.Println("Logger 尝试读取ETCD配置: /global/log.toml Error:", err)
+		if err == nil {
+			go watchEtcdConfigUpdated(etcdClient, "/global/log.toml")
+		}
 	}
 	// 尝试从本地读取配置
 	if err != nil || etcdClient == nil {
@@ -177,6 +160,9 @@ func NewLogManager(etcdClient *commonModel.EtcdClient, env string) (err error) {
 		}
 		err = err2
 		fmt.Println("Logger 尝试读取本地配置文件:", logFilePath, " Error:", err)
+		if err == nil {
+			go watchFileConfigUpdated(logFilePath)
+		}
 	}
 	// 如果读取配置失败，使用默认配置
 	if err != nil {
@@ -232,6 +218,75 @@ func NewLogManager(etcdClient *commonModel.EtcdClient, env string) (err error) {
 	return nil
 }
 
+func watchEtcdConfigUpdated(etcdClient *commonModel.EtcdClient, key string) {
+	watchChan := etcdClient.GetClient().Watch(context.Background(), key)
+	for watchResp := range watchChan {
+		for _, ev := range watchResp.Events {
+			switch ev.Type {
+			case clientv3.EventTypePut:
+				conf := &LogConf{}
+				err := toml.Unmarshal(ev.Kv.Value, conf)
+				if err == nil {
+					for loggerName, levelName := range conf.Level {
+						if level, ok := loggerLevelMap[strings.ToLower(levelName)]; ok {
+							if logger, ok := loggerManager.loggers[loggerName]; ok {
+								logger.SetLevel(level)
+							}
+						}
+					}
+				}
+			case clientv3.EventTypeDelete:
+				// Do nothing
+			}
+		}
+	}
+}
+
+// 监听文件变化
+func watchFileConfigUpdated(filePath string) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer watcher.Close()
+
+	err = watcher.Add(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for {
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+			if event.Op&fsnotify.Write == fsnotify.Write {
+				fmt.Printf("Config file changed: %s\n", event.Name)
+				file, err2 := os.ReadFile(filePath)
+				if err2 == nil {
+					conf := &LogConf{}
+					err2 = toml.Unmarshal(file, conf)
+					if err2 == nil {
+						for loggerName, levelName := range conf.Level {
+							if level, ok := loggerLevelMap[strings.ToLower(levelName)]; ok {
+								if logger, ok := loggerManager.loggers[loggerName]; ok {
+									logger.SetLevel(level)
+								}
+							}
+						}
+					}
+				}
+			}
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			log.Println("Error:", err)
+		}
+	}
+}
+
 func (l *LoggerManager) GetLoggerLevel(loggerName string, defaultLevel Level) Level {
 	if levelName, ok := l.conf.Level[loggerName]; ok {
 		if level, ok := loggerLevelMap[strings.ToLower(levelName)]; ok {
@@ -239,6 +294,28 @@ func (l *LoggerManager) GetLoggerLevel(loggerName string, defaultLevel Level) Le
 		}
 	}
 	return defaultLevel
+}
+
+// 新增：ConsoleAppender的Write方法实现
+func (c *ConsoleAppender) Write(p []byte) (n int, err error) {
+	return os.Stdout.Write(p)
+}
+
+// Close 修改：ConsoleAppender的Close方法实现
+func (c *ConsoleAppender) Close() error {
+	// 控制台输出无需关闭，直接返回nil
+	return nil
+}
+
+// 新增：FileAppender的Write方法实现
+func (f *FileAppender) Write(p []byte) (n int, err error) {
+	return f.fileWriter.Write(p)
+}
+
+// Close 修改：FileAppender的Close方法实现
+func (f *FileAppender) Close() error {
+	// 关闭文件资源
+	return f.fileWriter.Close()
 }
 
 func (l *Logger) SetLevel(level Level) {

@@ -6,6 +6,7 @@ require (
 	github.com/doug-martin/goqu/v9 v9.19.0
 	github.com/eclipse/paho.mqtt.golang v1.5.0
 	github.com/fasthttp/router v1.5.2
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
