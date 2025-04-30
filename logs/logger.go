@@ -322,6 +322,30 @@ func (l *Logger) SetLevel(level Level) {
 	l.level = level
 }
 
+func (l *Logger) IsLevelEnabled(level Level) bool {
+	return l.level >= level
+}
+
+func (l *Logger) IsDebugEnabled() bool {
+	return l.IsLevelEnabled(DebugLevel)
+}
+
+func (l *Logger) IsInfoEnabled() bool {
+	return l.IsLevelEnabled(InfoLevel)
+}
+
+func (l *Logger) IsWarnEnabled() bool {
+	return l.IsLevelEnabled(WarnLevel)
+}
+
+func (l *Logger) IsErrorEnabled() bool {
+	return l.IsLevelEnabled(ErrorLevel)
+}
+
+func (l *Logger) IsLogEnabled() bool {
+	return l.IsLevelEnabled(LogLevel)
+}
+
 func (l *Logger) Debug(args ...interface{}) {
 	if l.level < DebugLevel {
 		return
