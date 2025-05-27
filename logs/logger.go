@@ -350,6 +350,17 @@ func (l *Logger) Debug(args ...interface{}) {
 	if l.level < DebugLevel {
 		return
 	}
+	message := ""
+	if len(args) == 0 {
+		return
+	}
+	format, ok := args[0].(string)
+	if !ok {
+		message = fmt.Sprint(args...)
+	} else {
+		message = fmt.Sprintf(format, args[1:]...)
+	}
+
 	pc, file, line, ok := runtime.Caller(1)
 	if !ok {
 		file = "unknown"
@@ -367,14 +378,23 @@ func (l *Logger) Debug(args ...interface{}) {
 		"@line":     line,
 		"@level":    loggerLevelStringMap[DebugLevel],
 		"@telegram": false,
-	}).Debug(args...)
+	}).Debug(message)
 }
 
 func (l *Logger) Info(args ...interface{}) {
 	if l.level < InfoLevel {
 		return
 	}
-
+	message := ""
+	if len(args) == 0 {
+		return
+	}
+	format, ok := args[0].(string)
+	if !ok {
+		message = fmt.Sprint(args...)
+	} else {
+		message = fmt.Sprintf(format, args[1:]...)
+	}
 	pc, file, line, ok := runtime.Caller(1)
 	if !ok {
 		file = "unknown"
@@ -392,14 +412,23 @@ func (l *Logger) Info(args ...interface{}) {
 		"@line":     line,
 		"@level":    loggerLevelStringMap[InfoLevel],
 		"@telegram": false,
-	}).Info(args...)
+	}).Info(message)
 }
 
 func (l *Logger) Warn(args ...interface{}) {
 	if l.level < WarnLevel {
 		return
 	}
-
+	message := ""
+	if len(args) == 0 {
+		return
+	}
+	format, ok := args[0].(string)
+	if !ok {
+		message = fmt.Sprint(args...)
+	} else {
+		message = fmt.Sprintf(format, args[1:]...)
+	}
 	pc, file, line, ok := runtime.Caller(1)
 	if !ok {
 		file = "unknown"
@@ -417,14 +446,23 @@ func (l *Logger) Warn(args ...interface{}) {
 		"@line":     line,
 		"@level":    loggerLevelStringMap[WarnLevel],
 		"@telegram": false,
-	}).Warn(args...)
+	}).Warn(message)
 }
 
 func (l *Logger) WarnT(args ...interface{}) {
 	if l.level < WarnLevel {
 		return
 	}
-
+	message := ""
+	if len(args) == 0 {
+		return
+	}
+	format, ok := args[0].(string)
+	if !ok {
+		message = fmt.Sprint(args...)
+	} else {
+		message = fmt.Sprintf(format, args[1:]...)
+	}
 	pc, file, line, ok := runtime.Caller(1)
 	if !ok {
 		file = "unknown"
@@ -442,13 +480,23 @@ func (l *Logger) WarnT(args ...interface{}) {
 		"@line":     line,
 		"@level":    loggerLevelStringMap[WarnLevel],
 		"@telegram": true,
-	}).Warn(args...)
+	}).Warn(message)
 }
 
 func (l *Logger) Error(args ...interface{}) {
 	if l.level < ErrorLevel {
 		return
 	}
+	message := ""
+	if len(args) == 0 {
+		return
+	}
+	format, ok := args[0].(string)
+	if !ok {
+		message = fmt.Sprint(args...)
+	} else {
+		message = fmt.Sprintf(format, args[1:]...)
+	}
 	pc, file, line, ok := runtime.Caller(1)
 	if !ok {
 		file = "unknown"
@@ -466,13 +514,23 @@ func (l *Logger) Error(args ...interface{}) {
 		"@line":     line,
 		"@level":    loggerLevelStringMap[ErrorLevel],
 		"@telegram": false,
-	}).Error(args...)
+	}).Error(message)
 }
 
 func (l *Logger) ErrorT(args ...interface{}) {
 	if l.level < ErrorLevel {
 		return
 	}
+	message := ""
+	if len(args) == 0 {
+		return
+	}
+	format, ok := args[0].(string)
+	if !ok {
+		message = fmt.Sprint(args...)
+	} else {
+		message = fmt.Sprintf(format, args[1:]...)
+	}
 	pc, file, line, ok := runtime.Caller(1)
 	if !ok {
 		file = "unknown"
@@ -490,12 +548,22 @@ func (l *Logger) ErrorT(args ...interface{}) {
 		"@line":     line,
 		"@level":    loggerLevelStringMap[ErrorLevel],
 		"@telegram": true,
-	}).Error(args...)
+	}).Error(message)
 }
 
 func (l *Logger) Log(args ...interface{}) {
 	if l.level < LogLevel {
 		return
+	}
+	message := ""
+	if len(args) == 0 {
+		return
+	}
+	format, ok := args[0].(string)
+	if !ok {
+		message = fmt.Sprint(args...)
+	} else {
+		message = fmt.Sprintf(format, args[1:]...)
 	}
 	pc, file, line, ok := runtime.Caller(1)
 	if !ok {
@@ -514,12 +582,22 @@ func (l *Logger) Log(args ...interface{}) {
 		"@line":     line,
 		"@level":    loggerLevelStringMap[LogLevel],
 		"@telegram": false,
-	}).Info(args...)
+	}).Info(message)
 }
 
 func (l *Logger) LogT(args ...interface{}) {
 	if l.level < LogLevel {
 		return
+	}
+	message := ""
+	if len(args) == 0 {
+		return
+	}
+	format, ok := args[0].(string)
+	if !ok {
+		message = fmt.Sprint(args...)
+	} else {
+		message = fmt.Sprintf(format, args[1:]...)
 	}
 	pc, file, line, ok := runtime.Caller(1)
 	if !ok {
@@ -538,5 +616,5 @@ func (l *Logger) LogT(args ...interface{}) {
 		"@line":     line,
 		"@level":    loggerLevelStringMap[LogLevel],
 		"@telegram": true,
-	}).Info(args...)
+	}).Info(message)
 }
