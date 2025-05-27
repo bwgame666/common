@@ -41,8 +41,6 @@ func (m *MqttClient) Public(topic string, message string) {
 	// 检查发布是否成功
 	if err := token.Error(); err != nil {
 		fmt.Println("publish message error: ", topic, err)
-	} else {
-		fmt.Println("Message published to successfully: ", topic)
 	}
 }
 
