@@ -1,6 +1,8 @@
 module github.com/bwgame666/common
 
-go 1.23.11
+go 1.23.0
+
+toolchain go1.23.4
 
 require (
 	github.com/doug-martin/goqu/v9 v9.19.0
