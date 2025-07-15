@@ -19,9 +19,11 @@ type HttpService struct {
 	EncryptResponse bool
 	GzipResponse    bool
 	EncryptKey      string
+	reportFun       ErrorReportFunc
 }
 
 type RequestHandler interface{}
+type ErrorReportFunc func(msgType string, msg string)
 
 type ResponseData struct {
 	Code    int         `json:"code"`
@@ -38,11 +40,16 @@ func New(middlewareList []MiddlewareFunc, encryptKey string, encryptResponse boo
 		EncryptResponse: encryptResponse,
 		GzipResponse:    false,
 		EncryptKey:      encryptKey,
+		reportFun:       nil,
 	}
 }
 
 func (that *HttpService) EnableGzip(gzipResponse bool) {
 	that.GzipResponse = gzipResponse
+}
+
+func (that *HttpService) SetErrorReportFun(f ErrorReportFunc) {
+	that.reportFun = f
 }
 
 func (that *HttpService) StartServer(addr string) {
@@ -161,6 +168,18 @@ func (that *HttpService) middlewareDecorator(handler fasthttp.RequestHandler) fa
 				costTime,
 			)
 			fmt.Println(info)
+		}
+
+		if (costTime > 100*time.Millisecond) && (that.reportFun != nil) {
+			path := string(ctx.Path())
+			info := fmt.Sprintf("path: %s, query args: %s, post args: %s, ts: %s, time cost: %v",
+				path,
+				ctx.QueryArgs().String(),
+				ctx.PostArgs().String(),
+				startTime.Format("2006-01-02 15:04:05"),
+				costTime,
+			)
+			that.reportFun("slow", info)
 		}
 	}
 }
