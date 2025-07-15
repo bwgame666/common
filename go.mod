@@ -1,9 +1,8 @@
-module common
+module github.com/bwgame666/common
 
 go 1.23.11
 
 require (
-	github.com/bwgame666/common v1.8.2
 	github.com/doug-martin/goqu/v9 v9.19.0
 	github.com/eclipse/paho.mqtt.golang v1.5.0
 	github.com/fasthttp/router v1.5.4
