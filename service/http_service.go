@@ -23,7 +23,7 @@ type HttpService struct {
 }
 
 type RequestHandler interface{}
-type ErrorReportFunc func(msgType string, msg string)
+type ErrorReportFunc func(msgType string, msg map[string]string)
 
 type ResponseData struct {
 	Code    int         `json:"code"`
@@ -172,14 +172,14 @@ func (that *HttpService) middlewareDecorator(handler fasthttp.RequestHandler) fa
 
 		if (costTime > 100*time.Millisecond) && (that.reportFun != nil) {
 			path := string(ctx.Path())
-			info := fmt.Sprintf("path: %s, query args: %s, post args: %s, ts: %s, time cost: %v",
-				path,
-				ctx.QueryArgs().String(),
-				ctx.PostArgs().String(),
-				startTime.Format("2006-01-02 15:04:05"),
-				costTime,
-			)
-			that.reportFun("slow", info)
+			msg := map[string]string{
+				"path":       path,
+				"query_args": ctx.QueryArgs().String(),
+				"post_args":  ctx.PostArgs().String(),
+				"ts":         startTime.Format("2006-01-02 15:04:05"),
+				"time_cost":  costTime.String(),
+			}
+			that.reportFun("slow", msg)
 		}
 	}
 }
