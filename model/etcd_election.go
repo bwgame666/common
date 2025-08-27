@@ -87,6 +87,17 @@ func (e *EtcdElectionClient) Campaign() error {
 					} else {
 					}
 				}
+			case <-e.session.Done():
+				// 会话过期后尝试重新创建会话
+				session, err := concurrency.NewSession(e.client, concurrency.WithContext(e.ctx), concurrency.WithTTL(15))
+				if err != nil {
+					fmt.Println("[Election] Failed to recreate session:", err)
+					time.Sleep(5 * time.Second) // 等待后重试
+					continue                    // 继续外层循环，重新参选
+				}
+				e.session = session
+				e.election = concurrency.NewElection(session, e.key)
+				continue
 			}
 		}
 		//fmt.Println("select master: ", e.key, e.value)
@@ -106,6 +117,15 @@ func (e *EtcdElectionClient) Campaign() error {
 		}
 		// 等待1分钟后再重新参与选举
 		time.Sleep(60 * time.Second)
+		// 重新建立会话
+		fmt.Println("[Election] renew session")
+		session, err := concurrency.NewSession(e.client, concurrency.WithContext(e.ctx), concurrency.WithTTL(15))
+		if err != nil {
+			fmt.Println("Couldn't create etcd session: ", err, e.key)
+		} else {
+			e.session = session
+			e.election = concurrency.NewElection(session, e.key)
+		}
 	}
 }
 
