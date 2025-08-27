@@ -7,6 +7,7 @@ import (
 	"go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
 	"go.uber.org/zap"
+	"time"
 )
 
 type MasterEventType int
@@ -65,39 +66,46 @@ func NewEtcdElectionClient(client *clientv3.Client, key string, value string, cb
 }
 
 func (e *EtcdElectionClient) Campaign() error {
-	// 参与选举，尝试成为领导者
-	ctx, cancelFunc := context.WithCancel(e.ctx)
-	defer cancelFunc()
-	if err := e.election.Campaign(ctx, e.value); err != nil {
-		e.eventChan <- MasterEvent{Type: MasterError, Error: err}
-		return err
-	}
-	//fmt.Println("Observe: ", e.key, e.value)
-observeEnd:
 	for {
-		select {
-		case res := <-e.election.Observe(ctx):
-			if len(res.Kvs) > 0 {
-				if string(res.Kvs[0].Value) == e.value {
-					fmt.Println("[Election] current node is be elected master: ", e.key, e.value)
-					e.eventChan <- MasterEvent{Type: MasterAdded, Master: string(res.Kvs[0].Value)}
-					break observeEnd
-				} else {
+		// 参与选举，尝试成为领导者
+		ctx, cancelFunc := context.WithCancel(e.ctx)
+		defer cancelFunc()
+		if err := e.election.Campaign(ctx, e.value); err != nil {
+			e.eventChan <- MasterEvent{Type: MasterError, Error: err}
+			return err
+		}
+		//fmt.Println("Observe: ", e.key, e.value)
+	observeEnd:
+		for {
+			select {
+			case res := <-e.election.Observe(ctx):
+				if len(res.Kvs) > 0 {
+					if string(res.Kvs[0].Value) == e.value {
+						fmt.Println("[Election] current node is be elected master: ", e.key, e.value)
+						e.eventChan <- MasterEvent{Type: MasterAdded, Master: string(res.Kvs[0].Value)}
+						break observeEnd
+					} else {
+					}
 				}
 			}
 		}
-	}
-	//fmt.Println("select master: ", e.key, e.value)
-	// if select master
-	for {
-		select {
-		case <-e.ctx.Done():
-			e.eventChan <- MasterEvent{Type: MasterError, Error: errors.New("elect: ctx done")}
-			return e.Resign()
-		case <-e.session.Done():
-			e.eventChan <- MasterEvent{Type: MasterError, Error: errors.New("elect: session expired")}
-			return errors.New("elect: session expired")
+		//fmt.Println("select master: ", e.key, e.value)
+		// if select master
+	masterEnd:
+		for {
+			select {
+			case <-e.ctx.Done():
+				e.eventChan <- MasterEvent{Type: MasterError, Error: errors.New("elect: ctx done")}
+				e.Resign()
+				break masterEnd
+			case <-e.session.Done():
+				e.eventChan <- MasterEvent{Type: MasterError, Error: errors.New("elect: session expired")}
+				//return errors.New("elect: session expired")
+				break masterEnd
+			}
 		}
+		// 等待1分钟后再重新参与选举
+		time.Sleep(60 * time.Second)
 	}
 }
 
