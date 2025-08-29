@@ -66,15 +66,16 @@ func NewEtcdElectionClient(client *clientv3.Client, key string, value string, cb
 }
 
 func (e *EtcdElectionClient) Campaign() error {
+	ctx, cancelFunc := context.WithCancel(e.ctx)
+	defer cancelFunc()
 	for {
 		// 参与选举，尝试成为领导者
-		ctx, cancelFunc := context.WithCancel(e.ctx)
-		defer cancelFunc()
 		if err := e.election.Campaign(ctx, e.value); err != nil {
+			fmt.Println("[Election] Failed to campaign:", err)
 			e.eventChan <- MasterEvent{Type: MasterError, Error: err}
-			return err
+			time.Sleep(3 * time.Second)
+			continue
 		}
-		//fmt.Println("Observe: ", e.key, e.value)
 	observeEnd:
 		for {
 			select {
@@ -89,6 +90,7 @@ func (e *EtcdElectionClient) Campaign() error {
 				}
 			case <-e.session.Done():
 				// 会话过期后尝试重新创建会话
+				fmt.Println("[Election] session expired: ", e.key, e.value)
 				session, err := concurrency.NewSession(e.client, concurrency.WithContext(e.ctx), concurrency.WithTTL(15))
 				if err != nil {
 					fmt.Println("[Election] Failed to recreate session:", err)
@@ -99,19 +101,17 @@ func (e *EtcdElectionClient) Campaign() error {
 				e.election = concurrency.NewElection(session, e.key)
 				continue
 			}
+			time.Sleep(3 * time.Second)
 		}
-		//fmt.Println("select master: ", e.key, e.value)
-		// if select master
 	masterEnd:
 		for {
 			select {
 			case <-e.ctx.Done():
 				e.eventChan <- MasterEvent{Type: MasterError, Error: errors.New("elect: ctx done")}
-				e.Resign()
+				_ = e.Resign()
 				break masterEnd
 			case <-e.session.Done():
 				e.eventChan <- MasterEvent{Type: MasterError, Error: errors.New("elect: session expired")}
-				//return errors.New("elect: session expired")
 				break masterEnd
 			}
 		}

@@ -26,7 +26,7 @@ func CallBack3(m model.MasterEvent) {
 }
 
 func main() {
-	etcC, err := model.NewEtcdClient([]string{"http://35.197.129.138:2379"}, "root", "admin@2023!")
+	etcC, err := model.NewEtcdClient([]string{"http://35.197.129.138:12379", "http://35.197.129.138:22379", "http://35.197.129.138:32379"}, "root", "admin@2023!")
 	if err != nil {
 		fmt.Println("connect etcd failed: ", err)
 		return
@@ -43,16 +43,18 @@ func main() {
 
 	for {
 		time.Sleep(30 * time.Second)
-		if master == 1 {
-			elect1.Stop()
-		}
-		if master == 2 {
-			elect2.Stop()
-		}
-		if master == 3 {
-			elect3.Stop()
-		}
-		master = 0
+		/*
+			if master == 1 {
+				elect1.Stop()
+			}
+			if master == 2 {
+				elect2.Stop()
+			}
+			if master == 3 {
+				elect3.Stop()
+			}
+			master = 0
+		*/
 
 	}
 }
