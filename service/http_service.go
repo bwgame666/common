@@ -173,11 +173,12 @@ func (that *HttpService) middlewareDecorator(handler fasthttp.RequestHandler) fa
 		if (costTime > 100*time.Millisecond) && (that.reportFun != nil) {
 			path := string(ctx.Path())
 			msg := map[string]string{
-				"path":       path,
-				"query_args": ctx.QueryArgs().String(),
-				"post_args":  ctx.PostArgs().String(),
-				"ts":         startTime.Format("2006-01-02 15:04:05"),
-				"time_cost":  costTime.String(),
+				"path":         path,
+				"query_args":   ctx.QueryArgs().String(),
+				"post_args":    ctx.PostArgs().String(),
+				"ts":           startTime.Format("2006-01-02 15:04:05"),
+				"time_cost":    costTime.String(),
+				"time_cost_ms": fmt.Sprintf("%d", int(costTime/time.Millisecond)),
 			}
 			that.reportFun("slow", msg)
 		}
