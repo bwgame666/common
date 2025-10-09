@@ -72,6 +72,12 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		data.Code = code
 		data.Message = msg
 		data.Data = d
-		svr.Response(ctx, data)
+		if len(returnValues) == 4 {
+			httpCode := returnValues[3].Interface().(int)
+			svr.ResponseWithCode(httpCode, ctx, data)
+		} else {
+			svr.Response(ctx, data)
+		}
+
 	}
 }

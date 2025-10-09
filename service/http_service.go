@@ -93,6 +93,10 @@ func (that *HttpService) Patch(path string, handle RequestHandler) {
 }
 
 func (that *HttpService) Response(ctx *fasthttp.RequestCtx, data *ResponseData) {
+	that.ResponseWithCode(200, ctx, data)
+}
+
+func (that *HttpService) ResponseWithCode(httpCode int, ctx *fasthttp.RequestCtx, data *ResponseData) {
 
 	bytes, err := libs.JsonMarshal(data)
 	if err != nil {
@@ -101,7 +105,7 @@ func (that *HttpService) Response(ctx *fasthttp.RequestCtx, data *ResponseData) 
 	}
 
 	if !that.EncryptResponse {
-		ctx.SetStatusCode(200)
+		ctx.SetStatusCode(httpCode)
 		ctx.SetContentType("application/json")
 		if that.GzipResponse {
 			ctx.Response.Header.Set("Content-Encoding", "gzip")
@@ -120,7 +124,7 @@ func (that *HttpService) Response(ctx *fasthttp.RequestCtx, data *ResponseData) 
 	}
 	encryptData := xxtea.Encrypt(bytes, []byte(that.EncryptKey))
 	sEnc := b64.StdEncoding.EncodeToString(encryptData)
-	ctx.SetStatusCode(200)
+	ctx.SetStatusCode(httpCode)
 	ctx.SetContentType("text/plain")
 	ctx.SetBody([]byte(sEnc))
 }

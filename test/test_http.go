@@ -21,11 +21,11 @@ type HelloResp struct {
 	Msg string `json:"msg" validate:"required"`
 }
 
-func HelloControl(ctx *fasthttp.RequestCtx, req *HelloReq) (code int, msg string, resp HelloResp) {
+func HelloControl(ctx *fasthttp.RequestCtx, req *HelloReq) (code int, msg string, resp HelloResp, httpCode int) {
 	fmt.Println(string(ctx.Path()))
 	fmt.Println(string(ctx.Request.Header.Peek("token")))
 	resp.Msg = fmt.Sprintf("hello world! %s, status: %d, desc: %s, count: %d", req.Name, req.Status, req.DescID, req.Count)
-	return 200, "success", resp
+	return 200, "success", resp, 403
 }
 
 func CheckStatus(fieldValue interface{}, fieldName, paramArg string) error {
