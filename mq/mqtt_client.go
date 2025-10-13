@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"github.com/bwgame666/common/libs"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/xxtea/xxtea-go/xxtea"
 	"log"
 	"time"
 )
 
 type MqttClient struct {
-	Client mqtt.Client
+	Client     mqtt.Client
+	EncryptKey string
 }
 
 func NewMqttClient(brokers []string, username string, passwd string) *MqttClient {
@@ -30,12 +32,23 @@ func NewMqttClient(brokers []string, username string, passwd string) *MqttClient
 		return nil
 	}
 	return &MqttClient{
-		Client: client,
+		Client:     client,
+		EncryptKey: "",
 	}
 }
 
+func (m *MqttClient) SetEncryptKey(encryptKey string) {
+	m.EncryptKey = encryptKey
+}
+
 func (m *MqttClient) Public(topic string, message string) {
-	token := m.Client.Publish(topic, 0, false, message)
+	var payload []byte
+	if m.EncryptKey != "" {
+		payload = xxtea.Encrypt([]byte(message), []byte(m.EncryptKey))
+	} else {
+		payload = []byte(message)
+	}
+	token := m.Client.Publish(topic, 0, false, payload)
 	token.Wait()
 
 	// 检查发布是否成功

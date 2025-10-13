@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/bwgame666/common/libs"
 	"github.com/gorilla/websocket"
+	"github.com/xxtea/xxtea-go/xxtea"
 	"go.uber.org/zap"
 	"sync"
 )
@@ -64,6 +65,7 @@ type WebSocketSession struct {
 	sendQueue        *libs.Pipe
 	ok               bool
 	capturePanic     bool
+	encryptKey       string
 	onSessionOpen    onSessFunc
 	onSessionClose   onSessFunc
 	onSessionMessage OnSessionMessageFunc
@@ -233,6 +235,10 @@ func (sess *WebSocketSession) SetEncoder(fn EncodeFunc) {
 	sess.encoder = fn
 }
 
+func (sess *WebSocketSession) SetEncryptKey(key string) {
+	sess.encryptKey = key
+}
+
 func (sess *WebSocketSession) SetSessionEvent(fn OnSessionMessageFunc) {
 	sess.onSessionMessage = fn
 }
@@ -290,7 +296,14 @@ func (sess *WebSocketSession) SendMessage(msg interface{}) {
 		if err != nil {
 			fmt.Println("websocket encode message failed", zap.Error(err))
 		}
-		err = sess.conn.WriteMessage(websocket.BinaryMessage, data)
+
+		var payload []byte
+		if sess.encryptKey != "" {
+			payload = xxtea.Encrypt(data, []byte(sess.encryptKey))
+		} else {
+			payload = data
+		}
+		err = sess.conn.WriteMessage(websocket.BinaryMessage, payload)
 		if err != nil {
 			fmt.Println("websocket send message failed", zap.Error(err))
 		}

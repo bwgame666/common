@@ -26,6 +26,8 @@ type WebSocket struct {
 	defaultDecoder DecodeFunc
 	defaultReceive OnSessionMessageFunc
 
+	encryptKey string
+
 	started bool
 	closed  bool
 	mu      sync.Mutex
@@ -37,6 +39,7 @@ func NewWebSocket(conf *WebSocketConfig, initFunc ...ServerOption) *WebSocket {
 		defaultDecoder: JsonDecoder,
 		defaultEncoder: JsonEncoder,
 		defaultReceive: nil,
+		encryptKey:     "",
 	}
 	webSocketObj.listener = NewWebSocketListener(conf.Addr, conf.Port, webSocketObj.OnConnOpen, webSocketObj.OnConnClose)
 	if conf.CertFile != "" && conf.KeyFile != "" {
@@ -109,6 +112,10 @@ func (ws *WebSocket) SetSessionEvent(fn OnSessionMessageFunc) {
 	ws.defaultReceive = fn
 }
 
+func (ws *WebSocket) SetEncryptKey(key string) {
+	ws.encryptKey = key
+}
+
 func (ws *WebSocket) Broadcast(msg interface{}) {
 	ws.sessMgr.ForEach(func(sess IWebSocketSession) bool {
 		sess.Send(msg)
@@ -121,6 +128,7 @@ func (ws *WebSocket) OnConnOpen(conn *websocket.Conn, clientIP string) {
 	ses := newSession(conn, clientIP, ws.OnSessionOpen, ws.OnSessionClose)
 	ses.SetDecoder(ws.defaultDecoder)
 	ses.SetEncoder(ws.defaultEncoder)
+	ses.SetEncryptKey(ws.encryptKey)
 	if ws.defaultReceive != nil {
 		ses.SetSessionEvent(ws.defaultReceive)
 	}
