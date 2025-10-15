@@ -148,6 +148,8 @@ func (that *HttpService) middlewareDecorator(handler fasthttp.RequestHandler) fa
 					data.Code = 408003
 				case "system-in-maintain":
 					data.Code = 408004
+				case "region-restricted":
+					data.Code = 408005
 				default:
 
 				}
