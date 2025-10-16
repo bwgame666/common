@@ -64,39 +64,76 @@ func (that *HttpService) StartServer(addr string) {
 	}
 }
 
-func (that *HttpService) Post(path string, handle RequestHandler) {
-	that.route.POST(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
+func (that *HttpService) Post(path string, handle RequestHandler, useGlobalEncrypt ...bool) {
+	shouldEncrypt := that.EncryptResponse
+	if len(useGlobalEncrypt) > 0 {
+		shouldEncrypt = that.EncryptResponse && useGlobalEncrypt[0]
+	}
+	that.route.POST(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle, shouldEncrypt), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
-func (that *HttpService) Get(path string, handle RequestHandler) {
-	that.route.GET(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
+func (that *HttpService) Get(path string, handle RequestHandler, useGlobalEncrypt ...bool) {
+	shouldEncrypt := that.EncryptResponse
+	if len(useGlobalEncrypt) > 0 {
+		shouldEncrypt = that.EncryptResponse && useGlobalEncrypt[0]
+	}
+	that.route.GET(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle, shouldEncrypt), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
-func (that *HttpService) Put(path string, handle RequestHandler) {
-	that.route.PUT(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
+func (that *HttpService) Put(path string, handle RequestHandler, useGlobalEncrypt ...bool) {
+	shouldEncrypt := that.EncryptResponse
+	if len(useGlobalEncrypt) > 0 {
+		shouldEncrypt = that.EncryptResponse && useGlobalEncrypt[0]
+	}
+	that.route.PUT(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle, shouldEncrypt), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
-func (that *HttpService) Delete(path string, handle RequestHandler) {
-	that.route.DELETE(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
+func (that *HttpService) Delete(path string, handle RequestHandler, useGlobalEncrypt ...bool) {
+	shouldEncrypt := that.EncryptResponse
+	if len(useGlobalEncrypt) > 0 {
+		shouldEncrypt = that.EncryptResponse && useGlobalEncrypt[0]
+	}
+	that.route.DELETE(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle, shouldEncrypt), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
-func (that *HttpService) Head(path string, handle RequestHandler) {
-	that.route.HEAD(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
+func (that *HttpService) Head(path string, handle RequestHandler, useGlobalEncrypt ...bool) {
+	shouldEncrypt := that.EncryptResponse
+	if len(useGlobalEncrypt) > 0 {
+		shouldEncrypt = that.EncryptResponse && useGlobalEncrypt[0]
+	}
+	that.route.HEAD(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle, shouldEncrypt), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
-func (that *HttpService) Options(path string, handle RequestHandler) {
-	that.route.OPTIONS(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
+func (that *HttpService) Options(path string, handle RequestHandler, useGlobalEncrypt ...bool) {
+	shouldEncrypt := that.EncryptResponse
+	if len(useGlobalEncrypt) > 0 {
+		shouldEncrypt = that.EncryptResponse && useGlobalEncrypt[0]
+	}
+	that.route.OPTIONS(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle, shouldEncrypt), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
-func (that *HttpService) Patch(path string, handle RequestHandler) {
-	that.route.PATCH(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle), that.ApiTimeout, that.ApiTimeoutMsg))
+func (that *HttpService) Patch(path string, handle RequestHandler, useGlobalEncrypt ...bool) {
+	shouldEncrypt := that.EncryptResponse
+	if len(useGlobalEncrypt) > 0 {
+		shouldEncrypt = that.EncryptResponse && useGlobalEncrypt[0]
+	}
+	that.route.PATCH(path, fasthttp.TimeoutHandler(validatorDecorator(that, handle, shouldEncrypt), that.ApiTimeout, that.ApiTimeoutMsg))
 }
 
-func (that *HttpService) Response(ctx *fasthttp.RequestCtx, data *ResponseData) {
-	that.ResponseWithCode(200, ctx, data)
+func (that *HttpService) Response(ctx *fasthttp.RequestCtx, data *ResponseData, shouldEncrypt bool) {
+	that.ResponseWithCode(200, ctx, data, shouldEncrypt)
 }
 
-func (that *HttpService) ResponseWithCode(httpCode int, ctx *fasthttp.RequestCtx, data *ResponseData) {
+func (that *HttpService) ResponseWithCode(httpCode int, ctx *fasthttp.RequestCtx, data *ResponseData, shouldEncrypt bool) {
+	ctx.SetStatusCode(httpCode)
+	if shouldEncrypt && that.EncryptKey != "" {
+		if dataBytes, err := libs.JsonMarshal(data.Data); err == nil {
+			encryptData := xxtea.Encrypt(dataBytes, []byte(that.EncryptKey))
+			data.Data = b64.StdEncoding.EncodeToString(encryptData)
+		} else {
+			data.Data = nil
+		}
+	}
 
 	bytes, err := libs.JsonMarshal(data)
 	if err != nil {
@@ -104,29 +141,14 @@ func (that *HttpService) ResponseWithCode(httpCode int, ctx *fasthttp.RequestCtx
 		return
 	}
 
-	if !that.EncryptResponse {
-		ctx.SetStatusCode(httpCode)
-		ctx.SetContentType("application/json")
-		if that.GzipResponse {
-			ctx.Response.Header.Set("Content-Encoding", "gzip")
-			gzippedData := fasthttp.AppendGzipBytes(nil, bytes)
-			ctx.SetBody(gzippedData)
-		} else {
-			ctx.SetBody(bytes)
-		}
-		return
+	ctx.SetContentType("application/json")
+	if that.GzipResponse {
+		ctx.Response.Header.Set("Content-Encoding", "gzip")
+		gzippedData := fasthttp.AppendGzipBytes(nil, bytes)
+		ctx.SetBody(gzippedData)
+	} else {
+		ctx.SetBody(bytes)
 	}
-
-	if that.EncryptKey == "" {
-		ctx.SetContentType("text/plain")
-		ctx.SetBody([]byte(""))
-		return
-	}
-	encryptData := xxtea.Encrypt(bytes, []byte(that.EncryptKey))
-	sEnc := b64.StdEncoding.EncodeToString(encryptData)
-	ctx.SetStatusCode(httpCode)
-	ctx.SetContentType("text/plain")
-	ctx.SetBody([]byte(sEnc))
 }
 
 func (that *HttpService) middlewareDecorator(handler fasthttp.RequestHandler) fasthttp.RequestHandler {
@@ -153,7 +175,7 @@ func (that *HttpService) middlewareDecorator(handler fasthttp.RequestHandler) fa
 				default:
 
 				}
-				that.Response(ctx, data)
+				that.Response(ctx, data, false)
 				return
 			}
 		}

@@ -16,7 +16,7 @@ func getRequestArgs(ctx *fasthttp.RequestCtx, paramValue interface{}) error {
 	return nil
 }
 
-func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.RequestHandler {
+func validatorDecorator(svr *HttpService, handle RequestHandler, shouldEncryptResponse bool) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
 		data := &ResponseData{
 			Code:    408000,
@@ -28,7 +28,7 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		funcType := reflect.TypeOf(handle)
 		if funcType.NumIn() < 2 {
 			fmt.Println("[validatorDecorator] Error: handle must have at least two parameters")
-			svr.Response(ctx, data)
+			svr.Response(ctx, data, false)
 			return
 		}
 
@@ -36,7 +36,7 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		paramType := funcType.In(1)
 		if paramType.Kind() != reflect.Ptr || paramType.Elem().Kind() != reflect.Struct {
 			fmt.Printf("[validatorDecorator] Error: the second parameter of handle must be a struct pointer, got: %v\n", paramType)
-			svr.Response(ctx, data)
+			svr.Response(ctx, data, false)
 			return
 		}
 
@@ -57,7 +57,7 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		if err != nil {
 			fmt.Println("[validatorDecorator] getRequestArgs Error:", err)
 			data.Message = err.Error()
-			svr.Response(ctx, data)
+			svr.Response(ctx, data, false)
 			return
 		}
 
@@ -74,9 +74,9 @@ func validatorDecorator(svr *HttpService, handle RequestHandler) fasthttp.Reques
 		data.Data = d
 		if len(returnValues) == 4 {
 			httpCode := returnValues[3].Interface().(int)
-			svr.ResponseWithCode(httpCode, ctx, data)
+			svr.ResponseWithCode(httpCode, ctx, data, shouldEncryptResponse)
 		} else {
-			svr.Response(ctx, data)
+			svr.Response(ctx, data, shouldEncryptResponse)
 		}
 
 	}
