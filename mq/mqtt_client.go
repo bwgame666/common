@@ -1,6 +1,7 @@
 package mq
 
 import (
+	b64 "encoding/base64"
 	"fmt"
 	"github.com/bwgame666/common/libs"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -42,11 +43,12 @@ func (m *MqttClient) SetEncryptKey(encryptKey string) {
 }
 
 func (m *MqttClient) Public(topic string, message string) {
-	var payload []byte
+	var payload string
 	if m.EncryptKey != "" {
-		payload = xxtea.Encrypt([]byte(message), []byte(m.EncryptKey))
+		data := xxtea.Encrypt([]byte(message), []byte(m.EncryptKey))
+		payload = b64.StdEncoding.EncodeToString(data)
 	} else {
-		payload = []byte(message)
+		payload = message
 	}
 	token := m.Client.Publish(topic, 0, false, payload)
 	token.Wait()
