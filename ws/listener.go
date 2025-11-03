@@ -48,15 +48,17 @@ func NewWebSocketListener(addr string, port int, onOpen onConnOpenF, onClose onC
 		onConnClose: onClose,
 	}
 }
-
 func (wa *WebSocketListener) Start() {
+	path := "/ws"
+	wa.StartWithPath(path)
+}
+
+func (wa *WebSocketListener) StartWithPath(path string) {
 	var (
 		err      error
 		hostPort string
-		path     string
 	)
 	hostPort = fmt.Sprintf("%s:%d", wa.addr, wa.port)
-	path = "/ws"
 
 	wa.wsListener, err = net.Listen("tcp", hostPort)
 	if err != nil {
