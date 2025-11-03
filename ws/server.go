@@ -52,6 +52,11 @@ func NewWebSocket(conf *WebSocketConfig, initFunc ...ServerOption) *WebSocket {
 }
 
 func (ws *WebSocket) Start(ctx context.Context) error {
+	path := "/ws"
+	return ws.StartWithPath(ctx, path)
+}
+
+func (ws *WebSocket) StartWithPath(ctx context.Context, path string) error {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
 
@@ -60,7 +65,7 @@ func (ws *WebSocket) Start(ctx context.Context) error {
 	}
 	ws.started = true
 
-	ws.listener.Start()
+	ws.listener.Start(path)
 
 	return nil
 }

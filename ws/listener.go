@@ -11,7 +11,7 @@ import (
 )
 
 type IWebSocketListener interface {
-	Start()
+	Start(path string)
 	Stop()
 	Addr() string
 	IsReady() bool
@@ -48,12 +48,8 @@ func NewWebSocketListener(addr string, port int, onOpen onConnOpenF, onClose onC
 		onConnClose: onClose,
 	}
 }
-func (wa *WebSocketListener) Start() {
-	path := "/ws"
-	wa.StartWithPath(path)
-}
 
-func (wa *WebSocketListener) StartWithPath(path string) {
+func (wa *WebSocketListener) Start(path string) {
 	var (
 		err      error
 		hostPort string
