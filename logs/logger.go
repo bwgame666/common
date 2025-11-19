@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -122,14 +123,50 @@ func GetLogger(name string) *Logger {
 			defaultLevel = InfoLevel
 		case EnvDev:
 			defaultLevel = DebugLevel
+		default:
+			defaultLevel = DebugLevel
 		}
 
 		level := loggerManager.GetLoggerLevel(name, defaultLevel)
-		logger = &Logger{
-			name:  name,
-			impl:  loggerManager.logImpl,
-			level: level,
+
+		if loggerManager.conf.FileAppender {
+			host, err := os.Hostname()
+			if err != nil {
+				host = "unknown"
+			}
+			filePath := filepath.Dir(loggerManager.conf.File.FilePath)
+			filePath = path.Join(filePath, host, fmt.Sprintf("%s_%s.log", name, time.Now().Format("0102T150405")))
+
+			fileAppender := &FileAppender{
+				fileWriter: &lumberjack.Logger{
+					Filename:   filePath,
+					MaxSize:    loggerManager.conf.File.MaxSize,
+					MaxBackups: loggerManager.conf.File.MaxBackups,
+					MaxAge:     loggerManager.conf.File.MaxAge,
+					Compress:   loggerManager.conf.File.Compress,
+				},
+			}
+			multiWriters := io.MultiWriter(loggerManager.logImpl.Out, fileAppender)
+
+			impl := log.New()
+			impl.SetLevel(log.TraceLevel)
+			impl.SetFormatter(&CustomFormatter{})
+			impl.SetOutput(multiWriters)
+			impl.Hooks = loggerManager.logImpl.Hooks
+
+			logger = &Logger{
+				name:  name,
+				impl:  impl,
+				level: level,
+			}
+		} else {
+			logger = &Logger{
+				name:  name,
+				impl:  loggerManager.logImpl,
+				level: level,
+			}
 		}
+
 		loggerManager.loggers[name] = logger
 	}
 	return logger
@@ -185,20 +222,6 @@ func NewLogManager(etcdClient *commonModel.EtcdClient, env string) (err error) {
 	if conf.ConsoleAppender {
 		consoleAppender := &ConsoleAppender{}
 		writers = append(writers, consoleAppender)
-	}
-
-	// 使用FileAppender模式
-	if conf.FileAppender {
-		fileAppender := &FileAppender{
-			fileWriter: &lumberjack.Logger{
-				Filename:   conf.File.FilePath,
-				MaxSize:    conf.File.MaxSize,
-				MaxBackups: conf.File.MaxBackups,
-				MaxAge:     conf.File.MaxAge,
-				Compress:   conf.File.Compress,
-			},
-		}
-		writers = append(writers, fileAppender)
 	}
 
 	if conf.NatsHook {
