@@ -135,7 +135,7 @@ func GetLogger(name string) *Logger {
 				host = "unknown"
 			}
 			filePath := filepath.Dir(loggerManager.conf.File.FilePath)
-			filePath = path.Join(filePath, host, fmt.Sprintf("%s_%s.log", name, time.Now().Format("0102T150405")))
+			filePath = path.Join(filePath, host, fmt.Sprintf("%s_%s.log", name, time.Now().Format("0102T15")))
 
 			fileAppender := &FileAppender{
 				fileWriter: &lumberjack.Logger{
