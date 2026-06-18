@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"sort"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -141,4 +142,22 @@ func Sign(apiKey string, params map[string][]string) string {
 	//fmt.Println("Sign string:", signStr)
 	//fmt.Println("Sign:", sign)
 	return sign
+}
+
+// MaskString 对字符串(user_id / user_name / 昵称等)做统一脱敏，输出恒为 10 位。
+// 规则：
+//   - 长度 > 4：前面固定 6 个 *，保留末尾 4 位，例 agent001winner333 -> ******r333
+//   - 长度 <= 4：前面补 * 到 10 位，原串放尾部，例 abcd -> ******abcd，ab -> ********ab
+//   - 空串直接返回空串
+func MaskString(s string) string {
+	runes := []rune(s)
+	length := len(runes)
+	if length == 0 {
+		return ""
+	}
+	const total = 10
+	if length > 4 {
+		return strings.Repeat("*", 6) + string(runes[length-4:])
+	}
+	return strings.Repeat("*", total-length) + s
 }
